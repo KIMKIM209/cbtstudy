@@ -7,7 +7,7 @@ st.set_page_config(page_title="국가기술자격 실전 CBT", page_icon="⚡", 
 
 st.title("⚡ 전기기능사 기출문제 연습")
 
-# 1. 23개년부틔 25개년까지의 전체 기출문제 동적 매핑 정의
+# 1. 전체 기출문제 동적 매핑 정의
 exam_mapping = {
     "25년도 1회차 시험 (202501)": "questions202501",
     "꼼수 63문제": "questions",
@@ -55,15 +55,22 @@ except ImportError:
 
 st.write(f"현재 선택: **{exam_choice}** (총 {len(questions)}문항 배치 완료)")
 
-# 4. 문제 풀이 레이아웃
+# 4. 문제 풀이 레이아웃 (이미지 엔진 완전 이식)
 for idx, item in enumerate(questions):
     st.markdown("---")
     st.subheader(f"Q{item['num']}. {item['q']}")
     
+    # 💡 데이터 파일에 이미지 경로가 명시되어 있다면 화면에 출력합니다.
+    if item.get("image"):
+        try:
+            st.image(item["image"], width=400)
+        except Exception:
+            st.warning(f"⚠️ 이미지 파일 '{item['image']}'을 불러올 수 없습니다. 경로를 확인하세요.")
+    
     choice = st.radio(
         "보기 선택:", 
         item['options'], 
-        key=f"q_{selected_module_name}_{idx}", # 회차별 고유 세션 키 바인딩
+        key=f"q_{selected_module_name}_{idx}", 
         index=None,
         disabled=st.session_state.submitted 
     )
@@ -111,6 +118,9 @@ else:
                 my_ans = wrong["my_answer"]
                 with st.expander(f"Q{item['num']} 오답 분석"):
                     st.write(f"**문제:** {item['q']}")
+                    if item.get("image"):
+                        try: st.image(item["image"], width=350)
+                        except Exception: pass
                     st.error(f"내 선택: {my_ans if my_ans else '미선택'}")
                     st.success(f"정답: {item['answer']}")
                     st.info(f"💡 해설: {item['explanation']}")
@@ -124,6 +134,9 @@ else:
                 my_ans = correct["my_answer"]
                 with st.expander(f"Q{item['num']} 정답 확인"):
                     st.write(f"**문제:** {item['q']}")
+                    if item.get("image"):
+                        try: st.image(item["image"], width=350)
+                        except Exception: pass
                     st.success(f"내 선택 & 정답: {my_ans}")
                     st.info(f"💡 해설: {item['explanation']}")
                     
