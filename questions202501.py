@@ -34,7 +34,7 @@ questions = [
             "③ 23.1",
             "④ 39"
         ],
-        "answer": "",
+        "answer": "③ 23.1",
         "explanation": "해설없음"
     },
     {
@@ -235,6 +235,7 @@ questions = [
         "options": [
             "① 0.2",
             "③ 1.0",
+            "③ 5.7",   
             "④ 7.5"
         ],
         "answer": "④ 7.5",
@@ -268,12 +269,12 @@ questions = [
         "num": "23",
         "q": "유도전동기의 동기속도를 Ns, 회전속도  를 N이라 하였을 때 슬립 s는?",
         "options": [
-            "① s= (Ns-N)/Ns"
+            "① s= (Ns-N)/Ns",
             "② s= (N-Ns)/Ns",
             "③ s= (Ns-N)/N",
             "④ s= (Ns+N)/Ns"
         ],
-        "answer": "① s= (Ns+N)/Ns",
+        "answer": "① s= (Ns-N)/Ns",
         "explanation": "해설없음"
     },
     {
