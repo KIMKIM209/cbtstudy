@@ -37,6 +37,9 @@ if 'submitted' not in st.session_state:
     st.session_state.submitted = False
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 1
+# 💡 [추가] 이미지 확대/축소 전역 상태
+if 'img_expanded' not in st.session_state:
+    st.session_state.img_expanded = False
 
 # 상단 메뉴
 exam_choice = st.selectbox(
@@ -71,6 +74,13 @@ total_pages = math.ceil(len(questions) / QUESTIONS_PER_PAGE)
 with st.sidebar:
     st.header("📝 OMR 답안지")
     st.caption("문제를 풀면 실시간으로 마킹됩니다.")
+    
+    # 💡 [추가] 사이드바에 이미지 확대/축소 전역 토글 배치
+    st.session_state.img_expanded = st.toggle(
+        "🔍 전체 그림 확대 보기", 
+        value=st.session_state.img_expanded, 
+        help="활성화 시 문제와 해설의 모든 그림이 크게 보입니다."
+    )
     st.markdown("---")
     
     omr_col1, omr_col2 = st.columns(2)
@@ -104,6 +114,10 @@ with st.sidebar:
             st.session_state.current_page = 1
             st.rerun()
 
+# 토글 상태에 따른 이미지 폭 결정
+main_img_width = 400 if st.session_state.img_expanded else 200
+tab_img_width = 350 if st.session_state.img_expanded else 175
+
 # 5. 본문 문제 풀이 영역 (제출 전)
 if not st.session_state.submitted:
     st.write(f"현재 선택: **{st.session_state.selected_exam_name}** (총 {len(questions)}문항 / {total_pages}페이지)")
@@ -124,10 +138,10 @@ if not st.session_state.submitted:
         with target_col:
             st.markdown(f"**{item['num']}. {item['q']}**")
             
-            # 💡 [핵심 교정부] 이미지 폭을 기존 400px에서 200px로 절반 축소
+            # 💡 [적용] 토글 상태에 연동된 이미지 폭
             if item.get("image"):
                 try:
-                    st.image(item["image"], width=200)
+                    st.image(item["image"], width=main_img_width)
                 except Exception:
                     pass
             
@@ -201,9 +215,9 @@ else:
                 my_ans = wrong["my_answer"]
                 with st.expander(f"Q{item['num']} 오답 분석"):
                     st.write(f"**문제:** {item['q']}")
-                    # 💡 오답 노트 탭 내부 이미지 크기도 기존 350px에서 175px로 축소
+                    # 💡 [적용] 탭 내부 이미지 크기 연동
                     if item.get("image"):
-                        try: st.image(item["image"], width=175)
+                        try: st.image(item["image"], width=tab_img_width)
                         except Exception: pass
                     st.error(f"내 선택: {my_ans if my_ans else '미선택'}")
                     st.success(f"정답: {item['answer']}")
@@ -218,9 +232,9 @@ else:
                 my_ans = correct["my_answer"]
                 with st.expander(f"Q{item['num']} 정답 확인"):
                     st.write(f"**문제:** {item['q']}")
-                    # 💡 정답 확인 탭 내부 이미지 크기도 175px로 통일
+                    # 💡 [적용] 탭 내부 이미지 크기 연동
                     if item.get("image"):
-                        try: st.image(item["image"], width=175)
+                        try: st.image(item["image"], width=tab_img_width)
                         except Exception: pass
                     st.success(f"내 선택 & 정답: {my_ans}")
                     st.info(f"💡 해설: {item['explanation']}")
