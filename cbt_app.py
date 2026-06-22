@@ -37,9 +37,11 @@ if 'submitted' not in st.session_state:
     st.session_state.submitted = False
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 1
-# 💡 [추가] 이미지 확대/축소 전역 상태
 if 'img_expanded' not in st.session_state:
     st.session_state.img_expanded = False
+# 💡 [추가] 누적 오답 횟수를 기록할 전역 딕셔너리 생성
+if 'wrong_counts' not in st.session_state:
+    st.session_state.wrong_counts = {}
 
 # 상단 메뉴
 exam_choice = st.selectbox(
@@ -75,7 +77,6 @@ with st.sidebar:
     st.header("📝 OMR 답안지")
     st.caption("문제를 풀면 실시간으로 마킹됩니다.")
     
-    # 💡 [추가] 사이드바에 이미지 확대/축소 전역 토글 배치
     st.session_state.img_expanded = st.toggle(
         "🔍 전체 그림 확대 보기", 
         value=st.session_state.img_expanded, 
@@ -95,6 +96,13 @@ with st.sidebar:
     
     if not st.session_state.submitted:
         if st.button("🏁 최종 답안 제출", type="primary", use_container_width=True):
+            # 💡 [추가] 제출하는 순간 오답 여부를 판별하여 누적 카운트 증가
+            for idx, item in enumerate(questions):
+                my_answer = st.session_state.user_answers.get(idx)
+                if my_answer != item['answer']:
+                    q_key = f"{selected_module_name}_{item['num']}"
+                    st.session_state.wrong_counts[q_key] = st.session_state.wrong_counts.get(q_key, 0) + 1
+            
             st.session_state.submitted = True
             st.session_state.current_page = 1
             st.rerun()
@@ -136,9 +144,14 @@ if not st.session_state.submitted:
         target_col = col_left if i < midpoint else col_right
         
         with target_col:
+            # 💡 [추가] 문제 번호 위에 오답 횟수 렌더링
+            q_key = f"{selected_module_name}_{item['num']}"
+            wrong_count = st.session_state.wrong_counts.get(q_key, 0)
+            if wrong_count > 0:
+                st.markdown(f"<span style='color: #FF4B4B; font-size: 0.85rem; font-weight: bold;'>🚨 {wrong_count}회 틀림</span>", unsafe_allow_html=True)
+                
             st.markdown(f"**{item['num']}. {item['q']}**")
             
-            # 💡 [적용] 토글 상태에 연동된 이미지 폭
             if item.get("image"):
                 try:
                     st.image(item["image"], width=main_img_width)
@@ -215,7 +228,6 @@ else:
                 my_ans = wrong["my_answer"]
                 with st.expander(f"Q{item['num']} 오답 분석"):
                     st.write(f"**문제:** {item['q']}")
-                    # 💡 [적용] 탭 내부 이미지 크기 연동
                     if item.get("image"):
                         try: st.image(item["image"], width=tab_img_width)
                         except Exception: pass
@@ -232,7 +244,6 @@ else:
                 my_ans = correct["my_answer"]
                 with st.expander(f"Q{item['num']} 정답 확인"):
                     st.write(f"**문제:** {item['q']}")
-                    # 💡 [적용] 탭 내부 이미지 크기 연동
                     if item.get("image"):
                         try: st.image(item["image"], width=tab_img_width)
                         except Exception: pass
