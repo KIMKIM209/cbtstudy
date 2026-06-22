@@ -18,7 +18,7 @@ exam_mapping = {
     "24년도 3회차 시험 (202403)": "questions202403",
     "23년도 1회차 시험 (202301)": "questions202301",
     "23년도 2회차 시험 (202302)": "questions202302",
-    "23년도 3회차 시험 (202303)": "questions202303",
+    "23년도 3회차 시험 (202303)": "questions202303",    
     "26년도 꼼수 63문제": "questions"
 }
 
@@ -122,10 +122,10 @@ if not st.session_state.submitted:
         with target_col:
             st.markdown(f"**{item['num']}. {item['q']}**")
             
-            # 💡 [핵심 교정부] 이미지를 화면 폭에 맞추지 않고 400픽셀로 고정하여 출력합니다.
+            # 💡 [핵심 교정부] 이미지 폭을 기존 400px에서 200px로 절반 축소
             if item.get("image"):
                 try:
-                    st.image(item["image"], width=400)
+                    st.image(item["image"], width=200)
                 except Exception:
                     pass
             
@@ -199,9 +199,9 @@ else:
                 my_ans = wrong["my_answer"]
                 with st.expander(f"Q{item['num']} 오답 분석"):
                     st.write(f"**문제:** {item['q']}")
-                    # 💡 오답 노트 탭 내부 이미지 크기도 350픽셀로 콤팩트하게 제어
+                    # 💡 오답 노트 탭 내부 이미지 크기도 기존 350px에서 175px로 축소
                     if item.get("image"):
-                        try: st.image(item["image"], width=350)
+                        try: st.image(item["image"], width=175)
                         except Exception: pass
                     st.error(f"내 선택: {my_ans if my_ans else '미선택'}")
                     st.success(f"정답: {item['answer']}")
@@ -216,8 +216,9 @@ else:
                 my_ans = correct["my_answer"]
                 with st.expander(f"Q{item['num']} 정답 확인"):
                     st.write(f"**문제:** {item['q']}")
+                    # 💡 정답 확인 탭 내부 이미지 크기도 175px로 통일
                     if item.get("image"):
-                        try: st.image(item["image"], width=350)
+                        try: st.image(item["image"], width=175)
                         except Exception: pass
                     st.success(f"내 선택 & 정답: {my_ans}")
                     st.info(f"💡 해설: {item['explanation']}")
