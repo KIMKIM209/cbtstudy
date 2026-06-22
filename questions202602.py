@@ -350,7 +350,7 @@ questions = [
             "③",
             "④"
         ],
-        "answer": "④",
+        "answer": "②",
         "explanation": "정답 확인 완료.",
         "image": "images/20260229.png"
     },
