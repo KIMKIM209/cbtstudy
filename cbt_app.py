@@ -134,3 +134,90 @@ if not st.session_state.submitted:
                 ans_index = item['options'].index(ans) if ans else None
             except ValueError:
                 ans_index = None
+            
+            choice = st.radio(
+                label="보기 선택", 
+                options=item['options'], 
+                key=f"q_{selected_module_name}_{actual_idx}", 
+                index=ans_index,
+                label_visibility="collapsed" 
+            )
+            st.session_state.user_answers[actual_idx] = choice
+            st.markdown("---")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    btn_col1, btn_col2, btn_col3 = st.columns([1, 2, 1])
+    
+    with btn_col1:
+        if st.session_state.current_page > 1:
+            if st.button("◀ 이전 페이지", use_container_width=True):
+                st.session_state.current_page -= 1
+                st.rerun()
+                
+    with btn_col2:
+        st.markdown(f"<h4 style='text-align: center; color: gray;'>Page {st.session_state.current_page} / {total_pages}</h4>", unsafe_allow_html=True)
+        
+    with btn_col3:
+        if st.session_state.current_page < total_pages:
+            if st.button("다음 페이지 ▶", use_container_width=True):
+                st.session_state.current_page += 1
+                st.rerun()
+
+# 6. 채점 및 결과 대시보드 (제출 후)
+else:
+    correct_count = 0
+    wrong_questions = []
+    correct_questions = []
+
+    for idx, item in enumerate(questions):
+        my_answer = st.session_state.user_answers.get(idx)
+        if my_answer == item['answer']:
+            correct_count += 1
+            correct_questions.append({"item": item, "my_answer": my_answer})
+        else:
+            wrong_questions.append({"item": item, "my_answer": my_answer})
+
+    score = int((correct_count / len(questions)) * 100)
+    
+    st.header("📊 최종 채점 결과")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("내 점수", f"{score}점")
+    col2.metric("맞은 문제", f"{correct_count}개")
+    col3.metric("틀린 문제", f"{len(wrong_questions)}개")
+
+    if score >= 60:
+        st.success("🎉 합격 기준을 안정적으로 충족했습니다! 이 견고한 흐름을 이어가세요.")
+    else:
+        st.warning("⚠️ 보완이 필요한 구간입니다. 아래 오답 분석 탭에 에너지를 집중하세요.")
+
+    tab1, tab2 = st.tabs(["📝 틀린 문제 (오답 노트)", "✅ 맞은 문제 다시보기"])
+    
+    with tab1:
+        if wrong_questions:
+            for wrong in wrong_questions:
+                item = wrong["item"]
+                my_ans = wrong["my_answer"]
+                with st.expander(f"Q{item['num']} 오답 분석"):
+                    st.write(f"**문제:** {item['q']}")
+                    # 💡 오답 노트 탭 내부 이미지 크기도 350픽셀로 콤팩트하게 제어
+                    if item.get("image"):
+                        try: st.image(item["image"], width=350)
+                        except Exception: pass
+                    st.error(f"내 선택: {my_ans if my_ans else '미선택'}")
+                    st.success(f"정답: {item['answer']}")
+                    st.info(f"💡 해설: {item['explanation']}")
+        else:
+            st.success("완벽합니다. 틀린 문항이 단 하나도 없습니다.")
+
+    with tab2:
+        if correct_questions:
+            for correct in correct_questions:
+                item = correct["item"]
+                my_ans = correct["my_answer"]
+                with st.expander(f"Q{item['num']} 정답 확인"):
+                    st.write(f"**문제:** {item['q']}")
+                    if item.get("image"):
+                        try: st.image(item["image"], width=350)
+                        except Exception: pass
+                    st.success(f"내 선택 & 정답: {my_ans}")
+                    st.info(f"💡 해설: {item['explanation']}")
