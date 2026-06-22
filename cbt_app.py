@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 import streamlit as st
 import importlib
+import math
 
-# 페이지 기본 설정
-st.set_page_config(page_title="국가기술자격 실전 CBT", page_icon="⚡", layout="centered")
+# 화면을 넓게 쓰는 실전형 와이드 레이아웃
+st.set_page_config(page_title="국가기술자격 실전 CBT", page_icon="⚡", layout="wide")
 
-st.title("⚡ 전기기능사 기출문제 연습")
+st.title("⚡ 전기기능사 실전 CBT")
 
-# 1. 전체 기출문제 동적 매핑 정의
+# 1. 기출문제 동적 매핑
 exam_mapping = {
     "25년도 1회차 시험 (202501)": "questions202501",
-    "꼼수 63문제": "questions",
     "25년도 2회차 시험 (202502)": "questions202502",
     "25년도 3회차 시험 (202503)": "questions202503",
     "24년도 1회차 시험 (202401)": "questions202401",
@@ -18,71 +18,138 @@ exam_mapping = {
     "24년도 3회차 시험 (202403)": "questions202403",
     "23년도 1회차 시험 (202301)": "questions202301",
     "23년도 2회차 시험 (202302)": "questions202302",
-    "23년도 3회차 시험 (202303)": "questions202303"
+    "23년도 3회차 시험 (202303)": "questions202303",    
+    "꼼수 63문제": "questions"
 }
 
-# 상단 선택 상자 구성
-exam_choice = st.selectbox(
-    "📝 응시할 기출문제를 선택하세요:",
-    list(exam_mapping.keys())
-)
-
-# 선택된 회차에 해당하는 파일명 매칭
+exam_choice = st.selectbox("📝 응시할 기출문제를 선택하세요:", list(exam_mapping.keys()))
 selected_module_name = exam_mapping[exam_choice]
 
-# 2. 회차 전환 시 메모리 엉킴 차단 및 세션 초기화 로직
+# 2. 세션 상태 및 페이지네이션 메모리 통제
 if 'current_exam' not in st.session_state:
     st.session_state.current_exam = selected_module_name
 
+# 다른 회차를 선택하면 모든 기록을 비우고 1페이지로 회귀
 if selected_module_name != st.session_state.current_exam:
     st.session_state.current_exam = selected_module_name
     st.session_state.user_answers = {}
     st.session_state.submitted = False
+    st.session_state.current_page = 1 
     st.rerun()
 
 if 'user_answers' not in st.session_state:
     st.session_state.user_answers = {}
 if 'submitted' not in st.session_state:
     st.session_state.submitted = False
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = 1
 
 # 3. 실시간 동적 모듈 로드 엔진
 try:
     exam_module = importlib.import_module(selected_module_name)
     questions = exam_module.questions
 except ImportError:
-    st.error(f"⚠️ '{selected_module_name}.py' 데이터 파일이 폴더에 존재하지 않습니다. 파일을 준비해 주세요.")
+    st.error(f"⚠️ '{selected_module_name}.py' 데이터 파일이 폴더에 존재하지 않습니다.")
     st.stop()
 
-st.write(f"현재 선택: **{exam_choice}** (총 {len(questions)}문항 배치 완료)")
+# 💡 [핵심] 페이지당 문항 수 고정 및 전체 페이지 계산
+QUESTIONS_PER_PAGE = 6
+total_pages = math.ceil(len(questions) / QUESTIONS_PER_PAGE)
 
-# 4. 문제 풀이 레이아웃 (이미지 엔진 완전 이식)
-for idx, item in enumerate(questions):
+# 4. 우측 고정형 실시간 OMR 사이드바
+with st.sidebar:
+    st.header("📝 OMR 답안지")
+    st.caption("문제를 풀면 실시간으로 마킹됩니다.")
     st.markdown("---")
-    st.subheader(f"Q{item['num']}. {item['q']}")
     
-    # 💡 데이터 파일에 이미지 경로가 명시되어 있다면 화면에 출력합니다.
-    if item.get("image"):
-        try:
-            st.image(item["image"], width=400)
-        except Exception:
-            st.warning(f"⚠️ 이미지 파일 '{item['image']}'을 불러올 수 없습니다. 경로를 확인하세요.")
+    omr_col1, omr_col2 = st.columns(2)
+    for idx, item in enumerate(questions):
+        ans = st.session_state.user_answers.get(idx)
+        ans_marker = ans[0] if ans else "표기 안됨"
+        
+        target_col = omr_col1 if idx % 2 == 0 else omr_col2
+        target_col.markdown(f"**{item['num']}**. {ans_marker}")
+        
+    st.markdown("---")
     
-    choice = st.radio(
-        "보기 선택:", 
-        item['options'], 
-        key=f"q_{selected_module_name}_{idx}", 
-        index=None,
-        disabled=st.session_state.submitted 
-    )
-    st.session_state.user_answers[idx] = choice
+    if not st.session_state.submitted:
+        if st.button("🏁 최종 답안 제출", type="primary", use_container_width=True):
+            st.session_state.submitted = True
+            st.session_state.current_page = 1
+            st.rerun()
+    else:
+        if st.button("🔄 현재 회차 다시 풀기", use_container_width=True):
+            st.session_state.user_answers = {}
+            st.session_state.submitted = False
+            st.session_state.current_page = 1
+            st.rerun()
 
-st.markdown("---")
-
-# 5. 채점 및 결과 분석 시스템
+# 5. 본문 문제 풀이 영역 (제출 전)
 if not st.session_state.submitted:
-    if st.button("🏁 시험 종료 및 채점하기", type="primary"):
-        st.session_state.submitted = True
-        st.rerun()
+    # 현재 상태 안내 및 멘탈 관리를 위한 진행률(Progress) 바
+    st.write(f"현재 선택: **{exam_choice}** (총 {len(questions)}문항 / {total_pages}페이지)")
+    st.progress(st.session_state.current_page / total_pages)
+    st.markdown("---")
+    
+    # 💡 [핵심] 현재 페이지에 해당하는 6문제만 잘라서 슬라이싱
+    start_idx = (st.session_state.current_page - 1) * QUESTIONS_PER_PAGE
+    end_idx = min(start_idx + QUESTIONS_PER_PAGE, len(questions))
+    page_questions = questions[start_idx:end_idx]
+    
+    # 좌우 2단 분할 (왼쪽 3문제, 오른쪽 3문제 배치를 위한 중앙값 계산)
+    col_left, col_right = st.columns(2, gap="large")
+    midpoint = math.ceil(len(page_questions) / 2)
+
+    for i, item in enumerate(page_questions):
+        actual_idx = start_idx + i  # 전체 데이터 기준 실제 인덱스
+        target_col = col_left if i < midpoint else col_right
+        
+        with target_col:
+            st.markdown(f"**{item['num']}. {item['q']}**")
+            
+            if item.get("image"):
+                try:
+                    st.image(item["image"], use_container_width=True)
+                except Exception:
+                    pass
+            
+            # 페이지를 이동했다 돌아와도 내가 체크한 답이 풀리지 않도록 기억하는 복원 엔진
+            ans = st.session_state.user_answers.get(actual_idx)
+            try:
+                ans_index = item['options'].index(ans) if ans else None
+            except ValueError:
+                ans_index = None
+            
+            choice = st.radio(
+                label="보기 선택", 
+                options=item['options'], 
+                key=f"q_{selected_module_name}_{actual_idx}", 
+                index=ans_index,
+                label_visibility="collapsed" 
+            )
+            st.session_state.user_answers[actual_idx] = choice
+            st.markdown("---")
+
+    # 💡 [핵심] 하단 페이지 이동 스위치
+    st.markdown("<br>", unsafe_allow_html=True)
+    btn_col1, btn_col2, btn_col3 = st.columns([1, 2, 1])
+    
+    with btn_col1:
+        if st.session_state.current_page > 1:
+            if st.button("◀ 이전 페이지", use_container_width=True):
+                st.session_state.current_page -= 1
+                st.rerun()
+                
+    with btn_col2:
+        st.markdown(f"<h4 style='text-align: center; color: gray;'>Page {st.session_state.current_page} / {total_pages}</h4>", unsafe_allow_html=True)
+        
+    with btn_col3:
+        if st.session_state.current_page < total_pages:
+            if st.button("다음 페이지 ▶", use_container_width=True):
+                st.session_state.current_page += 1
+                st.rerun()
+
+# 6. 채점 및 결과 대시보드 (제출 후)
 else:
     correct_count = 0
     wrong_questions = []
@@ -119,7 +186,7 @@ else:
                 with st.expander(f"Q{item['num']} 오답 분석"):
                     st.write(f"**문제:** {item['q']}")
                     if item.get("image"):
-                        try: st.image(item["image"], width=350)
+                        try: st.image(item["image"], width=400)
                         except Exception: pass
                     st.error(f"내 선택: {my_ans if my_ans else '미선택'}")
                     st.success(f"정답: {item['answer']}")
@@ -135,13 +202,7 @@ else:
                 with st.expander(f"Q{item['num']} 정답 확인"):
                     st.write(f"**문제:** {item['q']}")
                     if item.get("image"):
-                        try: st.image(item["image"], width=350)
+                        try: st.image(item["image"], width=400)
                         except Exception: pass
                     st.success(f"내 선택 & 정답: {my_ans}")
                     st.info(f"💡 해설: {item['explanation']}")
-                    
-    st.markdown("---")
-    if st.button("🔄 현재 회차 처음부터 다시 풀기"):
-        st.session_state.user_answers = {}
-        st.session_state.submitted = False
-        st.rerun()
