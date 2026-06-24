@@ -311,7 +311,7 @@ questions = [
             "③ 0",
             "④ 0.4834"
         ],
-        "answer": "④ 0.4834",
+        "answer": "③ 0",
         "explanation": "정답 확인 완료."
     },
     {
