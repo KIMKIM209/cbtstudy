@@ -308,10 +308,10 @@ questions = [
         "num": "26",
         "q": "역률 80[%], 유효전력 80[kW] 일 때 무효전력은?",
         "options": [
-            "① 10[kVa",
-            "② 16[kVa",
-            "③ 60[kVa",
-            "④ 64[kVa"
+            "① 10[kVa]",
+            "② 16[kVa]",
+            "③ 60[kVa]",
+            "④ 64[kVa]"
         ],
         "answer": "③ 60[kVa",
         "explanation": "정답 확인 완료."
