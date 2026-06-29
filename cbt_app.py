@@ -6,7 +6,7 @@ import math
 # 화면을 넓게 쓰는 실전형 와이드 레이아웃
 st.set_page_config(page_title="국가기술자격 실전 CBT", page_icon="⚡", layout="wide")
 
-st.title("⚡ 전기기능사 실전 CBT")
+st.title("⚡ 실전 CBT")
 
 # 1. 기출문제 동적 매핑
 exam_mapping = {
