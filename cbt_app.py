@@ -98,19 +98,19 @@ with st.sidebar:
     print_mode = st.toggle("🖨️ 전체 문제 인쇄 모드", help="전체 문항을 실제 시험지 양식으로 출력합니다.")
 
 # ---------------------------------------------------------
-# 💡 [핵심] 실제 시험지(2단 편집) 스타일 및 레이아웃 강제 통제
+# 💡 [핵심] 실제 시험지 스타일 및 레이아웃 강제 통제
 # ---------------------------------------------------------
 if print_mode:
     st.markdown("## 🖨️ 인쇄용 전체 문제 보기 (시험지 모드)")
-    st.info("💡 **출력 팁:** 인쇄 창(Ctrl+P)이 열리면 설정에서 **'머리글 및 바닥글'을 체크 해제**하세요. 밑에 나오는 URL이 사라져 더욱 완벽한 시험지가 됩니다.")
+    st.info("💡 **출력 팁:** 인쇄 창(Ctrl+P)이 열리면 설정에서 **'머리글 및 바닥글'을 체크 해제**하세요.")
     
     exam_paper_css = """
     <style>
-    /* 화면 미리보기용 보기 2x2 배열 설정 */
+    /* 💡 핵심 2: 보기 문항 세로(1, 2, 3, 4) 나열 강제 */
     .exam-options {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
         font-size: 0.95em;
         margin-top: 8px;
         margin-bottom: 25px;
@@ -125,9 +125,11 @@ if print_mode:
         section[data-testid="stSidebar"], 
         .stButton, div[data-testid="stCaptionContainer"] { display: none !important; }
         
-        /* 💡 핵심 1: 완전한 흑백 출력 강제 (회색 톤 제거) */
-        * {
+        /* 💡 핵심 1: 글씨를 회색으로 만드는 스트림릿 고유의 투명도(opacity) 무효화 및 완전 흑백 강제 */
+        div.block-container * {
             color: #000000 !important;
+            opacity: 1 !important;
+            text-shadow: none !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
         }
@@ -141,7 +143,7 @@ if print_mode:
             column-rule: 1px solid #000 !important;
         }
 
-        p, div { font-size: 10.5pt !important; line-height: 1.4 !important; }
+        p, div, span { font-size: 10.5pt !important; line-height: 1.4 !important; }
         strong { font-size: 11pt !important; }
 
         /* 이미지 통제: 어떤 이미지도 단의 100% 폭을 넘지 못하게 강제 */
@@ -162,7 +164,7 @@ if print_mode:
             -webkit-column-break-inside: avoid !important;
             display: inline-block !important; 
             width: 100% !important;
-            margin-bottom: 10px !important;
+            margin-bottom: 12px !important;
         }
         
         .exam-options { margin-bottom: 20px !important; }
@@ -176,10 +178,9 @@ if print_mode:
 
     st.markdown("---")
     
-    # 기호 매핑용 배열
     symbols = ['①', '②', '③', '④', '⑤']
     
-    # 문항 렌더링 (단 끊김 방지를 위해 각 문항을 st.container로 묶음)
+    # 문항 렌더링
     for item in questions:
         with st.container():
             st.markdown(f"**{item['num']}. {item['q']}**")
@@ -192,7 +193,6 @@ if print_mode:
             
             opts_html = "<div class='exam-options'>"
             for idx, opt in enumerate(item['options']):
-                # 💡 핵심 2: 원본 데이터에 포함된 기호 및 공백을 정규표현식으로 모두 제거
                 clean_opt = re.sub(r'^[\s①②③④⑤1-5\.\(\)]+', '', str(opt))
                 sym = symbols[idx] if idx < len(symbols) else f"({idx+1})"
                 opts_html += f"<div>{sym} {clean_opt}</div>"
