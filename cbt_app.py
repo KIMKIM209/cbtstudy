@@ -33,7 +33,6 @@ exam_list = list(exam_mapping.keys())
 if 'selected_exam_name' not in st.session_state:
     st.session_state.selected_exam_name = exam_list[0]
     st.session_state.current_exam = exam_mapping[exam_list[0]]
-
 if 'user_answers' not in st.session_state:
     st.session_state.user_answers = {}
 if 'submitted' not in st.session_state:
@@ -42,7 +41,6 @@ if 'current_page' not in st.session_state:
     st.session_state.current_page = 1
 if 'img_expanded' not in st.session_state:
     st.session_state.img_expanded = False
-# 💡 [추가] 누적 오답 횟수를 기록할 전역 딕셔너리 생성
 if 'wrong_counts' not in st.session_state:
     st.session_state.wrong_counts = {}
 
@@ -77,53 +75,67 @@ total_pages = math.ceil(len(questions) / QUESTIONS_PER_PAGE)
 
 # 4. 우측 고정형 실시간 OMR 사이드바 및 흐름 제어 스위치
 with st.sidebar:
-    st.header("📝 OMR 답안지")
-    st.caption("문제를 풀면 실시간으로 마킹됩니다.")
-    
-    st.session_state.img_expanded = st.toggle(
-        "🔍 전체 그림 확대 보기", 
-        value=st.session_state.img_expanded, 
-        help="활성화 시 문제와 해설의 모든 그림이 크게 보입니다."
-    )
-    st.markdown("---")
-    
-    omr_col1, omr_col2 = st.columns(2)
-    for idx, item in enumerate(questions):
-        ans = st.session_state.user_answers.get(idx)
-        ans_marker = ans[0] if ans else "표기 안됨"
-        
-        target_col = omr_col1 if idx % 2 == 0 else omr_col2
-        target_col.markdown(f"**{item['num']}**. {ans_marker}")
-        
-    st.markdown("---")
+    st.header("📋 OMR 답안지")
     
     if not st.session_state.submitted:
-        if st.button("🏁 최종 답안 제출", type="primary", use_container_width=True):
-            # 💡 [추가] 제출하는 순간 오답 여부를 판별하여 누적 카운트 증가
-            for idx, item in enumerate(questions):
-                my_answer = st.session_state.user_answers.get(idx)
-                if my_answer != item['answer']:
-                    q_key = f"{selected_module_name}_{item['num']}"
-                    st.session_state.wrong_counts[q_key] = st.session_state.wrong_counts.get(q_key, 0) + 1
-            
+        st.info("문제를 풀면 답안이 실시간으로 기록됩니다.")
+        # OMR 마킹 현황 요약
+        answered_count = len([ans for ans in st.session_state.user_answers.values() if ans is not None])
+        st.progress(answered_count / len(questions), text=f"풀이 진행률: {answered_count} / {len(questions)}")
+        
+        if st.button("✅ 최종 답안 제출 및 채점", type="primary", use_container_width=True):
             st.session_state.submitted = True
-            st.session_state.current_page = 1
             st.rerun()
     else:
-        st.subheader("🔄 다음 단계 진행")
-        next_choice = st.selectbox(
-            "현재 회차 복습 또는 다른 회차 선택:", 
-            exam_list, 
-            index=exam_list.index(st.session_state.selected_exam_name),
-            key="post_exam_selector"
-        )
-        if st.button("🚀 선택한 시험 시작", type="primary", use_container_width=True):
-            st.session_state.selected_exam_name = next_choice
-            st.session_state.current_exam = exam_mapping[next_choice]
+        st.success("채점이 완료되었습니다.")
+        if st.button("🔄 다른 시험 보기 (초기화)", use_container_width=True):
             st.session_state.user_answers = {}
             st.session_state.submitted = False
             st.session_state.current_page = 1
             st.rerun()
+
+    # 💡 [핵심] 인쇄 토글을 'with st.sidebar:' 영역 가장 아래에 배치
+    st.markdown("---")
+    print_mode = st.toggle("🖨️ 전체 문제 인쇄 모드", help="전체 문항을 한 페이지에 모아 출력합니다.")
+
+# ---------------------------------------------------------
+# 💡 [핵심] 인쇄 모드 실행 로직 (사이드바 밖, 본문 5번 시작 전)
+# ---------------------------------------------------------
+if print_mode:
+    st.markdown("## 🖨️ 인쇄용 전체 문제 보기")
+    st.caption("아래 '인쇄 창 열기' 버튼을 누르거나 단축키(Ctrl+P / Cmd+P)를 눌러 PDF로 저장하거나 출력하세요. 인쇄 시 메뉴판은 자동으로 사라집니다.")
+    
+    # 불필요한 UI 숨김 처리
+    hide_ui_css = """
+    <style>
+    @media print {
+        header[data-testid="stHeader"] { display: none !important; }
+        section[data-testid="stSidebar"] { display: none !important; }
+        .stButton>button { display: none !important; }
+        div.block-container { padding-top: 2rem !important; }
+    }
+    </style>
+    """
+    st.markdown(hide_ui_css, unsafe_allow_html=True)
+    
+    if st.button("🖨️ 인쇄 창 열기", type="primary"):
+        st.components.v1.html("<script>window.parent.print();</script>", height=0)
+
+    st.markdown("---")
+    
+    # 전체 문항 렌더링
+    for item in questions:
+        st.markdown(f"**{item['num']}. {item['q']}**")
+        if item.get("image"):
+            try: st.image(item["image"], width=400)
+            except Exception: pass
+        for opt in item['options']:
+            st.markdown(f"&nbsp;&nbsp;&nbsp; ◦ {opt}")
+        st.markdown("<br>", unsafe_allow_html=True)
+    
+    # 🛑 렌더링 차단: 인쇄 모드일 때는 기존 문제 풀이 화면을 띄우지 않고 여기서 멈춤
+    st.stop() 
+
 
 # 토글 상태에 따른 이미지 폭 결정
 main_img_width = 400 if st.session_state.img_expanded else 200
@@ -147,7 +159,6 @@ if not st.session_state.submitted:
         target_col = col_left if i < midpoint else col_right
         
         with target_col:
-            # 💡 [추가] 문제 번호 위에 오답 횟수 렌더링
             q_key = f"{selected_module_name}_{item['num']}"
             wrong_count = st.session_state.wrong_counts.get(q_key, 0)
             if wrong_count > 0:
