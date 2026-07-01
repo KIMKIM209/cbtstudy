@@ -97,7 +97,7 @@ with st.sidebar:
     print_mode = st.toggle("🖨️ 전체 문제 인쇄 모드", help="전체 문항을 실제 시험지 양식으로 출력합니다.")
 
 # ---------------------------------------------------------
-# 💡 [핵심] 실제 시험지(2단 편집) 스타일을 구현하는 인쇄 모드
+# 💡 [핵심] 실제 시험지(2단 편집) 스타일 및 레이아웃 강제 통제
 # ---------------------------------------------------------
 if print_mode:
     st.markdown("## 🖨️ 인쇄용 전체 문제 보기 (시험지 모드)")
@@ -133,14 +133,28 @@ if print_mode:
             column-rule: 1px solid #ddd !important;
         }
 
-        /* 텍스트 크기를 실제 시험지 규격(약 10.5~11pt)으로 축소 */
         p, div { font-size: 10.5pt !important; line-height: 1.4 !important; }
         strong { font-size: 11pt !important; }
+
+        /* 💡 핵심 1. 이미지 통제: 어떤 이미지도 단의 100% 폭을 넘지 못하게 강제 */
+        img {
+            max-width: 100% !important;
+            height: auto !important;
+            object-fit: contain !important;
+        }
+        div[data-testid="stImage"] {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
         
-        /* st.container로 묶은 문제 블록이 단/페이지 중간에 잘리지 않도록 보호 */
+        /* 💡 핵심 2. 단 끊김 및 겹침 방지: 각 문제를 독립된 블록으로 굳힘 */
         div[data-testid="stVerticalBlock"] > div:has(> div.element-container) {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+            display: inline-block !important; /* 옆 단 침범을 막는 가장 강력한 방어막 */
+            width: 100% !important;
+            margin-bottom: 10px !important;
         }
         
         .exam-options { margin-bottom: 20px !important; }
