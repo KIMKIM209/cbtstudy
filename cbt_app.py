@@ -79,7 +79,6 @@ with st.sidebar:
     
     if not st.session_state.submitted:
         st.info("문제를 풀면 답안이 실시간으로 기록됩니다.")
-        # OMR 마킹 현황 요약
         answered_count = len([ans for ans in st.session_state.user_answers.values() if ans is not None])
         st.progress(answered_count / len(questions), text=f"풀이 진행률: {answered_count} / {len(questions)}")
         
@@ -94,46 +93,93 @@ with st.sidebar:
             st.session_state.current_page = 1
             st.rerun()
 
-    # 💡 [핵심] 인쇄 토글을 'with st.sidebar:' 영역 가장 아래에 배치
     st.markdown("---")
-    print_mode = st.toggle("🖨️ 전체 문제 인쇄 모드", help="전체 문항을 한 페이지에 모아 출력합니다.")
+    print_mode = st.toggle("🖨️ 전체 문제 인쇄 모드", help="전체 문항을 실제 시험지 양식으로 출력합니다.")
 
 # ---------------------------------------------------------
-# 💡 [핵심] 인쇄 모드 실행 로직 (사이드바 밖, 본문 5번 시작 전)
+# 💡 [핵심] 실제 시험지(2단 편집) 스타일을 구현하는 인쇄 모드
 # ---------------------------------------------------------
 if print_mode:
-    st.markdown("## 🖨️ 인쇄용 전체 문제 보기")
-    st.caption("아래 '인쇄 창 열기' 버튼을 누르거나 단축키(Ctrl+P / Cmd+P)를 눌러 PDF로 저장하거나 출력하세요. 인쇄 시 메뉴판은 자동으로 사라집니다.")
+    st.markdown("## 🖨️ 인쇄용 전체 문제 보기 (시험지 모드)")
+    st.info("💡 **출력 팁:** 인쇄 창(Ctrl+P)이 열리면 설정에서 **'머리글 및 바닥글'을 체크 해제**하세요. 밑에 나오는 URL이 사라져 더욱 완벽한 시험지가 됩니다.")
     
-    # 불필요한 UI 숨김 처리
-    hide_ui_css = """
+    exam_paper_css = """
     <style>
+    /* 화면 미리보기용 보기 2x2 배열 설정 */
+    .exam-options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        font-size: 0.95em;
+        margin-top: 8px;
+        margin-bottom: 25px;
+    }
+    
     @media print {
-        header[data-testid="stHeader"] { display: none !important; }
-        section[data-testid="stSidebar"] { display: none !important; }
-        .stButton>button { display: none !important; }
-        div.block-container { padding-top: 2rem !important; }
+        /* A4 규격 및 여백 최소화 */
+        @page { size: A4; margin: 12mm; }
+        
+        /* 불필요한 UI 완벽 제거 */
+        header[data-testid="stHeader"], 
+        section[data-testid="stSidebar"], 
+        .stButton, div[data-testid="stCaptionContainer"] { display: none !important; }
+        
+        /* 전체 컨테이너를 2단(다단)으로 강제 분할 */
+        div.block-container { 
+            padding: 0 !important; 
+            max-width: 100% !important; 
+            column-count: 2 !important;
+            column-gap: 30px !important;
+            column-rule: 1px solid #ddd !important;
+        }
+
+        /* 텍스트 크기를 실제 시험지 규격(약 10.5~11pt)으로 축소 */
+        p, div { font-size: 10.5pt !important; line-height: 1.4 !important; }
+        strong { font-size: 11pt !important; }
+        
+        /* st.container로 묶은 문제 블록이 단/페이지 중간에 잘리지 않도록 보호 */
+        div[data-testid="stVerticalBlock"] > div:has(> div.element-container) {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+        }
+        
+        .exam-options { margin-bottom: 20px !important; }
     }
     </style>
     """
-    st.markdown(hide_ui_css, unsafe_allow_html=True)
+    st.markdown(exam_paper_css, unsafe_allow_html=True)
     
     if st.button("🖨️ 인쇄 창 열기", type="primary"):
         st.components.v1.html("<script>window.parent.print();</script>", height=0)
 
     st.markdown("---")
     
-    # 전체 문항 렌더링
-    for item in questions:
-        st.markdown(f"**{item['num']}. {item['q']}**")
-        if item.get("image"):
-            try: st.image(item["image"], width=400)
-            except Exception: pass
-        for opt in item['options']:
-            st.markdown(f"&nbsp;&nbsp;&nbsp; ◦ {opt}")
-        st.markdown("<br>", unsafe_allow_html=True)
+    # 기호 매핑용 배열
+    symbols = ['①', '②', '③', '④', '⑤']
     
-    # 🛑 렌더링 차단: 인쇄 모드일 때는 기존 문제 풀이 화면을 띄우지 않고 여기서 멈춤
+    # 문항 렌더링 (단 끊김 방지를 위해 각 문항을 st.container로 묶음)
+    for item in questions:
+        with st.container():
+            # 1. 문제 제목
+            st.markdown(f"**{item['num']}. {item['q']}**")
+            
+            # 2. 이미지 처리 (시험지 비율에 맞춰 출력되도록 폭 제한)
+            if item.get("image"):
+                try: 
+                    st.image(item["image"], width=250)
+                except Exception: 
+                    pass
+            
+            # 3. 보기 배열 (2x2 그리드 구조)
+            opts_html = "<div class='exam-options'>"
+            for idx, opt in enumerate(item['options']):
+                sym = symbols[idx] if idx < len(symbols) else f"({idx+1})"
+                opts_html += f"<div>{sym} {opt}</div>"
+            opts_html += "</div>"
+            
+            st.markdown(opts_html, unsafe_allow_html=True)
+    
+    # 인쇄 모드 렌더링 후 화면 차단
     st.stop() 
 
 
