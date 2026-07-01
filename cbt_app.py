@@ -2,6 +2,7 @@
 import streamlit as st
 import importlib
 import math
+import re
 
 # 화면을 넓게 쓰는 실전형 와이드 레이아웃
 st.set_page_config(page_title="국가기술자격 실전 CBT", page_icon="⚡", layout="wide")
@@ -124,19 +125,26 @@ if print_mode:
         section[data-testid="stSidebar"], 
         .stButton, div[data-testid="stCaptionContainer"] { display: none !important; }
         
+        /* 💡 핵심 1: 완전한 흑백 출력 강제 (회색 톤 제거) */
+        * {
+            color: #000000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        
         /* 전체 컨테이너를 2단(다단)으로 강제 분할 */
         div.block-container { 
             padding: 0 !important; 
             max-width: 100% !important; 
             column-count: 2 !important;
             column-gap: 30px !important;
-            column-rule: 1px solid #ddd !important;
+            column-rule: 1px solid #000 !important;
         }
 
         p, div { font-size: 10.5pt !important; line-height: 1.4 !important; }
         strong { font-size: 11pt !important; }
 
-        /* 💡 핵심 1. 이미지 통제: 어떤 이미지도 단의 100% 폭을 넘지 못하게 강제 */
+        /* 이미지 통제: 어떤 이미지도 단의 100% 폭을 넘지 못하게 강제 */
         img {
             max-width: 100% !important;
             height: auto !important;
@@ -147,12 +155,12 @@ if print_mode:
             max-width: 100% !important;
         }
         
-        /* 💡 핵심 2. 단 끊김 및 겹침 방지: 각 문제를 독립된 블록으로 굳힘 */
+        /* 단 끊김 및 겹침 방지: 각 문제를 독립된 블록으로 굳힘 */
         div[data-testid="stVerticalBlock"] > div:has(> div.element-container) {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
-            display: inline-block !important; /* 옆 단 침범을 막는 가장 강력한 방어막 */
+            display: inline-block !important; 
             width: 100% !important;
             margin-bottom: 10px !important;
         }
@@ -174,21 +182,20 @@ if print_mode:
     # 문항 렌더링 (단 끊김 방지를 위해 각 문항을 st.container로 묶음)
     for item in questions:
         with st.container():
-            # 1. 문제 제목
             st.markdown(f"**{item['num']}. {item['q']}**")
             
-            # 2. 이미지 처리 (시험지 비율에 맞춰 출력되도록 폭 제한)
             if item.get("image"):
                 try: 
                     st.image(item["image"], width=250)
                 except Exception: 
                     pass
             
-            # 3. 보기 배열 (2x2 그리드 구조)
             opts_html = "<div class='exam-options'>"
             for idx, opt in enumerate(item['options']):
+                # 💡 핵심 2: 원본 데이터에 포함된 기호 및 공백을 정규표현식으로 모두 제거
+                clean_opt = re.sub(r'^[\s①②③④⑤1-5\.\(\)]+', '', str(opt))
                 sym = symbols[idx] if idx < len(symbols) else f"({idx+1})"
-                opts_html += f"<div>{sym} {opt}</div>"
+                opts_html += f"<div>{sym} {clean_opt}</div>"
             opts_html += "</div>"
             
             st.markdown(opts_html, unsafe_allow_html=True)
