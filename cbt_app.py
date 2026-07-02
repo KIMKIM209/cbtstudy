@@ -97,9 +97,14 @@ with st.sidebar:
     st.markdown("---")
     print_mode = st.toggle("🖨️ 전체 문제 인쇄 모드", help="전체 문항을 실제 시험지 양식으로 출력합니다.")
     
-    show_answer_mode = False
+    # 💡 [핵심] 인쇄 모드가 켜졌을 때 다각적 관점으로 선택 가능한 출력 옵션
+    print_option = "문제만 인쇄"
     if print_mode:
-        show_answer_mode = st.toggle("📝 정답 및 해설 같이 인쇄", help="인쇄 시 각 문항 하단에 정답과 해설을 포함합니다.")
+        print_option = st.radio(
+            "📝 출력 옵션 선택",
+            ["문제만 인쇄", "정답만 표기", "정답 및 해설 표기"],
+            horizontal=True
+        )
 
 # ---------------------------------------------------------
 # 5. 실제 시험지 스타일 및 레이아웃 강제 통제 (인쇄 모드)
@@ -110,7 +115,6 @@ if print_mode:
     
     exam_paper_css = """
     <style>
-    /* 보기 문항 세로 나열 */
     .exam-options {
         display: flex;
         flex-direction: column;
@@ -120,11 +124,17 @@ if print_mode:
         margin-bottom: 12px;
     }
     
-    /* 해설 박스 스타일링 (겹침 방지를 위해 display: block 강제) */
+    /* 정답만 표기할 때의 스타일 */
+    .print-answer-only {
+        margin-top: 10px;
+        font-size: 0.95em;
+        font-weight: bold;
+    }
+
+    /* 정답 및 해설 표기할 때의 스타일 */
     .print-answer-box {
         display: block;
         margin-top: 15px;
-        margin-bottom: 25px;
         padding-top: 12px;
         border-top: 1.5px dashed #666;
         font-size: 0.92em;
@@ -139,7 +149,6 @@ if print_mode:
         section[data-testid="stSidebar"], 
         .stButton, div[data-testid="stCaptionContainer"] { display: none !important; }
         
-        /* 투명도 무효화 및 완전 흑백 강제 */
         div.block-container * {
             color: #000000 !important;
             opacity: 1 !important;
@@ -170,14 +179,14 @@ if print_mode:
             max-width: 100% !important;
         }
         
-        /* 단 끊김 방지: 각 문제 단위를 거대한 하나의 블록으로 굳힘 */
-        div[data-testid="stVerticalBlock"] > div:has(> div.element-container) {
+        /* 💡 [겹침 원천 차단] Streamlit이 생성하는 각 문제의 컨테이너를 하나의 절대 블록으로 통제 */
+        div.block-container > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
             display: inline-block !important; 
             width: 100% !important;
-            margin-bottom: 15px !important;
+            margin-bottom: 25px !important;
         }
     }
     </style>
@@ -192,6 +201,7 @@ if print_mode:
     symbols = ['①', '②', '③', '④', '⑤']
     
     for item in questions:
+        # 각 문제를 st.container()로 묶어 내부 요소들이 브라우저 렌더링 시 쪼개지지 않도록 강제함
         with st.container():
             st.markdown(f"**{item['num']}. {item['q']}**")
             
@@ -201,7 +211,6 @@ if print_mode:
                 except Exception: 
                     pass
             
-            # 💡 [핵심 해결] 보기와 해설을 분리하지 않고 하나의 HTML 문자열(combined_html)로 결합하여 렌더링
             combined_html = "<div class='exam-options'>"
             for idx, opt in enumerate(item['options']):
                 clean_opt = re.sub(r'^[\s①②③④⑤1-5\.\(\)]+', '', str(opt))
@@ -209,13 +218,15 @@ if print_mode:
                 combined_html += f"<div>{sym} {clean_opt}</div>"
             combined_html += "</div>"
             
-            if show_answer_mode:
+            # 선택된 라디오 버튼 옵션에 따라 HTML 덩어리를 구성
+            if print_option == "정답만 표기":
+                ans_text = item.get("answer", "정보 없음")
+                combined_html += f"<div class='print-answer-only'>✅ 정답: {ans_text}</div>"
+            elif print_option == "정답 및 해설 표기":
                 ans_text = item.get("answer", "정보 없음")
                 exp_text = item.get("explanation", "해설 없음")
-                # 보기 HTML 덩어리 바로 아래에 해설 HTML 덩어리를 물리적으로 이어 붙임
                 combined_html += f"<div class='print-answer-box'><strong>✅ 정답:</strong> {ans_text}<br><br><strong>💡 해설:</strong> {exp_text}</div>"
             
-            # 스트림릿이 상자를 여러 개 만들지 못하도록 단 한 번만 markdown을 호출
             st.markdown(combined_html, unsafe_allow_html=True)
     
     st.stop() 
