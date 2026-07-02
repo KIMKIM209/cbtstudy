@@ -96,9 +96,14 @@ with st.sidebar:
 
     st.markdown("---")
     print_mode = st.toggle("🖨️ 전체 문제 인쇄 모드", help="전체 문항을 실제 시험지 양식으로 출력합니다.")
+    
+    # 💡 [핵심] 인쇄 모드가 켜졌을 때만 나타나는 해설 표기 스위치
+    show_answer_mode = False
+    if print_mode:
+        show_answer_mode = st.toggle("📝 정답 및 해설 같이 인쇄", help="인쇄 시 각 문항 하단에 정답과 해설을 포함합니다.")
 
 # ---------------------------------------------------------
-# 💡 [핵심] 실제 시험지 스타일 및 레이아웃 강제 통제
+# 5. 실제 시험지 스타일 및 레이아웃 강제 통제 (인쇄 모드)
 # ---------------------------------------------------------
 if print_mode:
     st.markdown("## 🖨️ 인쇄용 전체 문제 보기 (시험지 모드)")
@@ -106,26 +111,35 @@ if print_mode:
     
     exam_paper_css = """
     <style>
-    /* 💡 핵심 2: 보기 문항 세로(1, 2, 3, 4) 나열 강제 */
+    /* 보기 문항 세로 나열 */
     .exam-options {
         display: flex;
         flex-direction: column;
         gap: 4px;
         font-size: 0.95em;
         margin-top: 8px;
+        margin-bottom: 15px;
+    }
+    
+    /* 💡 [추가] 해설 박스 스타일링 (점선 테두리로 분리감 형성) */
+    .print-answer-box {
+        margin-top: 8px;
         margin-bottom: 25px;
+        padding-top: 8px;
+        border-top: 1px dashed #000;
+        font-size: 0.9em;
+        line-height: 1.4;
+        break-inside: avoid;
     }
     
     @media print {
-        /* A4 규격 및 여백 최소화 */
         @page { size: A4; margin: 12mm; }
         
-        /* 불필요한 UI 완벽 제거 */
         header[data-testid="stHeader"], 
         section[data-testid="stSidebar"], 
         .stButton, div[data-testid="stCaptionContainer"] { display: none !important; }
         
-        /* 💡 핵심 1: 글씨를 회색으로 만드는 스트림릿 고유의 투명도(opacity) 무효화 및 완전 흑백 강제 */
+        /* 투명도 무효화 및 완전 흑백 강제 */
         div.block-container * {
             color: #000000 !important;
             opacity: 1 !important;
@@ -134,7 +148,6 @@ if print_mode:
             print-color-adjust: exact !important;
         }
         
-        /* 전체 컨테이너를 2단(다단)으로 강제 분할 */
         div.block-container { 
             padding: 0 !important; 
             max-width: 100% !important; 
@@ -146,7 +159,6 @@ if print_mode:
         p, div, span { font-size: 10.5pt !important; line-height: 1.4 !important; }
         strong { font-size: 11pt !important; }
 
-        /* 이미지 통제: 어떤 이미지도 단의 100% 폭을 넘지 못하게 강제 */
         img {
             max-width: 100% !important;
             height: auto !important;
@@ -157,7 +169,6 @@ if print_mode:
             max-width: 100% !important;
         }
         
-        /* 단 끊김 및 겹침 방지: 각 문제를 독립된 블록으로 굳힘 */
         div[data-testid="stVerticalBlock"] > div:has(> div.element-container) {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
@@ -166,8 +177,6 @@ if print_mode:
             width: 100% !important;
             margin-bottom: 12px !important;
         }
-        
-        .exam-options { margin-bottom: 20px !important; }
     }
     </style>
     """
@@ -180,7 +189,6 @@ if print_mode:
     
     symbols = ['①', '②', '③', '④', '⑤']
     
-    # 문항 렌더링
     for item in questions:
         with st.container():
             st.markdown(f"**{item['num']}. {item['q']}**")
@@ -197,10 +205,15 @@ if print_mode:
                 sym = symbols[idx] if idx < len(symbols) else f"({idx+1})"
                 opts_html += f"<div>{sym} {clean_opt}</div>"
             opts_html += "</div>"
-            
             st.markdown(opts_html, unsafe_allow_html=True)
+            
+            # 💡 [핵심] 해설 스위치가 켜져 있을 때만 정답과 해설 블록을 렌더링
+            if show_answer_mode:
+                ans_text = item.get("answer", "정보 없음")
+                exp_text = item.get("explanation", "해설 없음")
+                ans_html = f"<div class='print-answer-box'><strong>✅ 정답:</strong> {ans_text}<br><strong>💡 해설:</strong> {exp_text}</div>"
+                st.markdown(ans_html, unsafe_allow_html=True)
     
-    # 인쇄 모드 렌더링 후 화면 차단
     st.stop() 
 
 
@@ -208,7 +221,7 @@ if print_mode:
 main_img_width = 400 if st.session_state.img_expanded else 200
 tab_img_width = 350 if st.session_state.img_expanded else 175
 
-# 5. 본문 문제 풀이 영역 (제출 전)
+# 6. 본문 문제 풀이 영역 (제출 전)
 if not st.session_state.submitted:
     st.write(f"현재 선택: **{st.session_state.selected_exam_name}** (총 {len(questions)}문항 / {total_pages}페이지)")
     st.progress(st.session_state.current_page / total_pages)
@@ -273,7 +286,7 @@ if not st.session_state.submitted:
                 st.session_state.current_page += 1
                 st.rerun()
 
-# 6. 채점 및 결과 대시보드 (제출 후)
+# 7. 채점 및 결과 대시보드 (제출 후)
 else:
     correct_count = 0
     wrong_questions = []
