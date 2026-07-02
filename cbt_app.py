@@ -97,7 +97,7 @@ with st.sidebar:
     st.markdown("---")
     print_mode = st.toggle("🖨️ 전체 문제 인쇄 모드", help="전체 문항을 실제 시험지 양식으로 출력합니다.")
     
-    # 💡 [핵심] 인쇄 모드가 켜졌을 때 다각적 관점으로 선택 가능한 출력 옵션
+    # 💡 인쇄 모드가 켜졌을 때 다각적 관점으로 선택 가능한 출력 옵션
     print_option = "문제만 인쇄"
     if print_mode:
         print_option = st.radio(
@@ -127,14 +127,16 @@ if print_mode:
     /* 정답만 표기할 때의 스타일 */
     .print-answer-only {
         margin-top: 10px;
+        margin-bottom: 25px !important;
         font-size: 0.95em;
         font-weight: bold;
     }
 
-    /* 정답 및 해설 표기할 때의 스타일 */
+    /* 정답 및 해설 표기할 때의 스타일 (여백 대폭 강화) */
     .print-answer-box {
         display: block;
         margin-top: 15px;
+        margin-bottom: 35px !important; /* 물리적 겹침을 막기 위한 하단 여백 추가 */
         padding-top: 12px;
         border-top: 1.5px dashed #666;
         font-size: 0.92em;
@@ -179,7 +181,7 @@ if print_mode:
             max-width: 100% !important;
         }
         
-        /* 💡 [겹침 원천 차단] Streamlit이 생성하는 각 문제의 컨테이너를 하나의 절대 블록으로 통제 */
+        /* Streamlit이 생성하는 각 문제의 컨테이너를 단일 블록으로 굳힘 */
         div.block-container > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
@@ -218,14 +220,14 @@ if print_mode:
                 combined_html += f"<div>{sym} {clean_opt}</div>"
             combined_html += "</div>"
             
-            # 선택된 라디오 버튼 옵션에 따라 HTML 덩어리를 구성
+            # 💡 [핵심 해결] 사용자의 요청대로 <br> 태그를 이용해 물리적인 줄바꿈 여백(Clearance)을 이중으로 부여
             if print_option == "정답만 표기":
                 ans_text = item.get("answer", "정보 없음")
-                combined_html += f"<div class='print-answer-only'>✅ 정답: {ans_text}</div>"
+                combined_html += f"<div class='print-answer-only'>✅ 정답: {ans_text}<br><br></div>"
             elif print_option == "정답 및 해설 표기":
                 ans_text = item.get("answer", "정보 없음")
                 exp_text = item.get("explanation", "해설 없음")
-                combined_html += f"<div class='print-answer-box'><strong>✅ 정답:</strong> {ans_text}<br><br><strong>💡 해설:</strong> {exp_text}</div>"
+                combined_html += f"<div class='print-answer-box'><strong>✅ 정답:</strong> {ans_text}<br><br><strong>💡 해설:</strong> {exp_text}<br><br><br></div>"
             
             st.markdown(combined_html, unsafe_allow_html=True)
     
