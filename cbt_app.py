@@ -40,10 +40,12 @@ if 'submitted' not in st.session_state:
     st.session_state.submitted = False
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 1
-if 'img_expanded' not in st.session_state:
-    st.session_state.img_expanded = False
 if 'wrong_counts' not in st.session_state:
     st.session_state.wrong_counts = {}
+    
+# (자동으로 UI와 연동되는 이미지 확대 세션 변수 초기화)
+if 'img_expanded' not in st.session_state:
+    st.session_state.img_expanded = False
 
 # 상단 메뉴
 exam_choice = st.selectbox(
@@ -74,6 +76,14 @@ except ImportError:
 QUESTIONS_PER_PAGE = 6
 total_pages = math.ceil(len(questions) / QUESTIONS_PER_PAGE)
 
+
+# ---------------------------------------------------------
+# 💡 [핵심] 토글 상태에 따른 이미지 폭 전역 결정
+# ---------------------------------------------------------
+current_img_width = 450 if st.session_state.img_expanded else 250
+tab_img_width = 400 if st.session_state.img_expanded else 200
+
+
 # 4. 우측 고정형 실시간 OMR 사이드바 및 흐름 제어 스위치
 with st.sidebar:
     st.header("📋 OMR 답안지")
@@ -95,9 +105,13 @@ with st.sidebar:
             st.rerun()
 
     st.markdown("---")
+    
+    # 💡 [추가] 그림 크게 보기 스위치
+    st.toggle("🔍 그림 크게 보기", key="img_expanded", help="문제에 포함된 도면이나 그림을 확대합니다.")
+    
     print_mode = st.toggle("🖨️ 전체 문제 인쇄 모드", help="전체 문항을 실제 시험지 양식으로 출력합니다.")
     
-    # 💡 인쇄 모드가 켜졌을 때 다각적 관점으로 선택 가능한 출력 옵션
+    # 인쇄 모드가 켜졌을 때 다각적 관점으로 선택 가능한 출력 옵션
     print_option = "문제만 인쇄"
     if print_mode:
         print_option = st.radio(
@@ -136,7 +150,7 @@ if print_mode:
     .print-answer-box {
         display: block;
         margin-top: 15px;
-        margin-bottom: 35px !important; /* 물리적 겹침을 막기 위한 하단 여백 추가 */
+        margin-bottom: 35px !important; 
         padding-top: 12px;
         border-top: 1.5px dashed #666;
         font-size: 0.92em;
@@ -170,6 +184,7 @@ if print_mode:
         p, div, span { font-size: 10.5pt !important; line-height: 1.4 !important; }
         strong { font-size: 11pt !important; }
 
+        /* 인쇄 시 이미지가 단(Column) 폭을 넘지 않도록 강력히 압축 방어 */
         img {
             max-width: 100% !important;
             height: auto !important;
@@ -203,13 +218,13 @@ if print_mode:
     symbols = ['①', '②', '③', '④', '⑤']
     
     for item in questions:
-        # 각 문제를 st.container()로 묶어 내부 요소들이 브라우저 렌더링 시 쪼개지지 않도록 강제함
         with st.container():
             st.markdown(f"**{item['num']}. {item['q']}**")
             
+            # 동적으로 결정된 이미지 폭 적용
             if item.get("image"):
                 try: 
-                    st.image(item["image"], width=250)
+                    st.image(item["image"], width=current_img_width)
                 except Exception: 
                     pass
             
@@ -220,7 +235,7 @@ if print_mode:
                 combined_html += f"<div>{sym} {clean_opt}</div>"
             combined_html += "</div>"
             
-            # 💡 [핵심 해결] 사용자의 요청대로 <br> 태그를 이용해 물리적인 줄바꿈 여백(Clearance)을 이중으로 부여
+            # 선택된 출력 방식에 따라 물리적인 줄바꿈 여백(Clearance) 추가 적용
             if print_option == "정답만 표기":
                 ans_text = item.get("answer", "정보 없음")
                 combined_html += f"<div class='print-answer-only'>✅ 정답: {ans_text}<br><br></div>"
@@ -233,10 +248,6 @@ if print_mode:
     
     st.stop() 
 
-
-# 토글 상태에 따른 이미지 폭 결정
-main_img_width = 400 if st.session_state.img_expanded else 200
-tab_img_width = 350 if st.session_state.img_expanded else 175
 
 # 6. 본문 문제 풀이 영역 (제출 전)
 if not st.session_state.submitted:
@@ -263,9 +274,10 @@ if not st.session_state.submitted:
                 
             st.markdown(f"**{item['num']}. {item['q']}**")
             
+            # 동적으로 결정된 이미지 폭 적용
             if item.get("image"):
                 try:
-                    st.image(item["image"], width=main_img_width)
+                    st.image(item["image"], width=current_img_width)
                 except Exception:
                     pass
             
