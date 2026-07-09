@@ -199,12 +199,12 @@ if print_mode:
             max-width: 100% !important;
         }
         
-        /* Streamlit이 생성하는 각 문제의 컨테이너를 단일 블록으로 굳힘 */
+        /* Streamlit이 생성하는 각 문제의 컨테이너를 단일 블록으로 굳힘 (수정됨) */
         div.block-container > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
-            break-inside: avoid !important;
+            break-inside: avoid-column !important;
             page-break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
-            display: inline-block !important; 
+            display: block !important; 
             width: 100% !important;
             margin-bottom: 25px !important;
         }
@@ -233,7 +233,8 @@ if print_mode:
             
             combined_html = "<div class='exam-options'>"
             for idx, opt in enumerate(item['options']):
-                clean_opt = re.sub(r'^[\s①②③④⑤1-5\.\(\)]+', '', str(opt))
+                # 정교하게 다듬어진 정규식 (수정됨)
+                clean_opt = re.sub(r'^[\s①②③④⑤]+|^(?:[1-5]\.|\([1-5]\))\s*', '', str(opt))
                 sym = symbols[idx] if idx < len(symbols) else f"({idx+1})"
                 combined_html += f"<div>{sym} {clean_opt}</div>"
             combined_html += "</div>"
