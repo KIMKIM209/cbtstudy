@@ -346,7 +346,7 @@ questions = [
             "③",
             "④"
         ],
-        "answer": "",
+        "answer": "④",
         "explanation": "",
         "image": "images/D240129.png"
     },
