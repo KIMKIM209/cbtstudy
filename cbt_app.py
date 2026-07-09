@@ -199,14 +199,16 @@ if print_mode:
             max-width: 100% !important;
         }
         
-        /* Streamlit이 생성하는 각 문제의 컨테이너를 단일 블록으로 굳힘 (수정됨) */
+        /* 💡 수정된 핵심 영역: 증발 방지와 겹침 방지를 동시에 해결하는 밸런스 튜닝 */
         div.block-container > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
-            break-inside: avoid-column !important;
+            display: inline-block !important; /* 다시 inline-block으로 복귀하여 문제 증발 차단 */
+            vertical-align: top !important;   /* 기준선을 상단으로 강제하여 겹침 현상 원천 해결 */
+            width: 100% !important;
+            break-inside: avoid !important;
             page-break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
-            display: block !important; 
-            width: 100% !important;
             margin-bottom: 25px !important;
+            overflow: hidden !important;      /* 영역 밖으로 밀리는 레이아웃 억제 */
         }
     }
     </style>
@@ -233,7 +235,7 @@ if print_mode:
             
             combined_html = "<div class='exam-options'>"
             for idx, opt in enumerate(item['options']):
-                # 정교하게 다듬어진 정규식 (수정됨)
+                # 정교하게 다듬어진 정규식 적용
                 clean_opt = re.sub(r'^[\s①②③④⑤]+|^(?:[1-5]\.|\([1-5]\))\s*', '', str(opt))
                 sym = symbols[idx] if idx < len(symbols) else f"({idx+1})"
                 combined_html += f"<div>{sym} {clean_opt}</div>"
