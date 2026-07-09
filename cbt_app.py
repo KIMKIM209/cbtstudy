@@ -187,7 +187,6 @@ if print_mode:
         p, div, span { font-size: 10.5pt !important; line-height: 1.4 !important; }
         strong { font-size: 11pt !important; }
 
-        /* 인쇄 시 이미지가 단(Column) 폭을 넘지 않도록 강력히 압축 방어 */
         img {
             max-width: 100% !important;
             height: auto !important;
@@ -199,16 +198,18 @@ if print_mode:
             max-width: 100% !important;
         }
         
-        /* 💡 수정된 핵심 영역: 증발 방지와 겹침 방지를 동시에 해결하는 밸런스 튜닝 */
+        /* 💡 수정된 핵심 영역: 브라우저 증발(Vanishing) 버그 완벽 차단 패치 */
         div.block-container > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
-            display: inline-block !important; /* 다시 inline-block으로 복귀하여 문제 증발 차단 */
-            vertical-align: top !important;   /* 기준선을 상단으로 강제하여 겹침 현상 원천 해결 */
+            display: inline-block !important; 
             width: 100% !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
-            margin-bottom: 25px !important;
-            overflow: hidden !important;      /* 영역 밖으로 밀리는 레이아웃 억제 */
+            margin-bottom: 5px !important;
+            padding-bottom: 20px !important; /* 마진 대신 패딩으로 공간을 확보하여 렌더링 엔진 오차 방어 */
+            vertical-align: top !important;
+            box-sizing: border-box !important;
+            transform: translateZ(0) !important; /* 강제 하드웨어 가속으로 브라우저의 렌더링 누락 원천 차단 */
         }
     }
     </style>
