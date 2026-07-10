@@ -46,7 +46,6 @@ if 'current_page' not in st.session_state:
 if 'wrong_counts' not in st.session_state:
     st.session_state.wrong_counts = {}
     
-# (자동으로 UI와 연동되는 이미지 확대 세션 변수 초기화)
 if 'img_expanded' not in st.session_state:
     st.session_state.img_expanded = False
 
@@ -109,12 +108,10 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # 💡 그림 크게 보기 스위치
     st.toggle("🔍 그림 크게 보기", key="img_expanded", help="문제에 포함된 도면이나 그림을 확대합니다.")
     
     print_mode = st.toggle("🖨️ 전체 문제 인쇄 모드", help="전체 문항을 실제 시험지 양식으로 출력합니다.")
     
-    # 인쇄 모드가 켜졌을 때 다각적 관점으로 선택 가능한 출력 옵션
     print_option = "문제만 인쇄"
     if print_mode:
         print_option = st.radio(
@@ -185,11 +182,10 @@ if print_mode:
         p, div, span { font-size: 10.5pt !important; line-height: 1.4 !important; }
         strong { font-size: 11pt !important; }
 
-        /* 💡 수정된 핵심 영역: 인쇄 시 이미지 폭주 및 침범 완벽 차단 */
         div[data-testid="stImage"], 
         div[data-testid="stImage"] > div,
         div[data-testid="stImage"] img {
-            max-width: 100% !important; /* 물리적 단(Column) 너비를 절대 넘지 못하도록 강제 */
+            max-width: 100% !important; 
             width: auto !important;
             height: auto !important;
             object-fit: contain !important;
@@ -203,7 +199,7 @@ if print_mode:
             page-break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
             margin-bottom: 5px !important;
-            padding-bottom: 20px !important;
+            padding-bottom: 20px !important; 
             vertical-align: top !important;
             box-sizing: border-box !important;
             transform: translateZ(0) !important; 
@@ -218,16 +214,13 @@ if print_mode:
 
     st.markdown("---")
     
-    # 💡 [핵심] 인쇄 전용 안전 이미지 폭 설정 (화면 토글과 관계없이 A4 2단에 최적화된 크기로 고정)
     PRINT_IMG_WIDTH = 250 
-
     symbols = ['①', '②', '③', '④', '⑤']
     
     for item in questions:
         with st.container():
             st.markdown(f"**{item['num']}. {item['q']}**")
             
-            # 인쇄 모드에서는 무조건 PRINT_IMG_WIDTH(250) 적용
             if item.get("image"):
                 try: 
                     st.image(item["image"], width=PRINT_IMG_WIDTH)
@@ -279,7 +272,6 @@ if not st.session_state.submitted:
                 
             st.markdown(f"**{item['num']}. {item['q']}**")
             
-            # 본문 풀이 영역에서는 사용자가 선택한 current_img_width (250 또는 450) 정상 적용
             if item.get("image"):
                 try:
                     st.image(item["image"], width=current_img_width)
@@ -334,19 +326,95 @@ else:
         else:
             wrong_questions.append({"item": item, "my_answer": my_answer})
 
-    score = int((correct_count / len(questions)) * 100)
+    total_score = int((correct_count / len(questions)) * 100)
     
     st.header("📊 최종 채점 결과")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("내 점수", f"{score}점")
-    col2.metric("맞은 문제", f"{correct_count}개")
-    col3.metric("틀린 문제", f"{len(wrong_questions)}개")
+    
+    # 💡 [핵심 분기 1] 동적 과락 판별 알고리즘: 80문항(4과목) 또는 100문항(5과목) 기사 시험
+    if len(questions) in [80, 100]:
+        num_subjects = len(questions) // 20
+        subject_scores = []
+        is_fail_by_subject = False
+        
+        for i in range(num_subjects):
+            sub_start = i * 20
+            sub_end = sub_start + 20
+            # 각 과목(20문제) 정답 수 계산
+            sub_correct = sum(1 for j in range(sub_start, sub_end) if st.session_state.user_answers.get(j) == questions[j]['answer'])
+            sub_score = sub_correct * 5  # 20문제 기준 1문제당 5점
+            subject_scores.append(sub_score)
+            
+            if sub_score < 40:
+                is_fail_by_subject = True
 
-    if score >= 60:
-        st.success("🎉 합격 기준을 안정적으로 충족했습니다! 이 견고한 흐름을 이어가세요.")
+        avg_score = sum(subject_scores) / num_subjects
+        
+        col_tot1, col_tot2, col_tot3, col_tot4 = st.columns(4)
+        col_tot1.metric("총 평균 점수", f"{avg_score:.1f}점")
+        col_tot2.metric("맞은 문제", f"{correct_count}개")
+        col_tot3.metric("틀린 문제", f"{len(wrong_questions)}개")
+        
+        if avg_score >= 60 and not is_fail_by_subject:
+            col_tot4.metric("최종 결과", "🟢 합격")
+            st.success("🎉 합격입니다! 모든 과목이 과락 방어선을 넘었고 평균 60점 이상을 달성했습니다.")
+        else:
+            col_tot4.metric("최종 결과", "🔴 불합격")
+            if is_fail_by_subject:
+                st.error("⚠️ 불합격: 전체 평균 점수와 무관하게 40점 미만인 과목(과락)이 존재합니다.")
+            else:
+                st.warning("⚠️ 불합격: 과락은 없으나 전체 평균 60점에 도달하지 못했습니다.")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("##### 📌 과목별 상세 점수 (과락 기준: 40점 미만)")
+        
+        # 문항 수에 비례하여 동적으로 컬럼(단)을 생성하여 레이아웃을 최적화합니다.
+        sub_cols = st.columns(num_subjects)
+        for i in range(num_subjects):
+            sub_status = "🔴 과락" if subject_scores[i] < 40 else "🟢 통과"
+            sub_cols[i].metric(f"제 {i+1}과목", f"{subject_scores[i]}점", sub_status, delta_color="off" if subject_scores[i] >= 40 else "inverse")
+
+    # 💡 [핵심 분기 2] 60문항 (기능사 시험: 3과목, 과락 없음)
+    elif len(questions) == 60:
+        subject_scores = []
+        
+        for i in range(3):
+            sub_start = i * 20
+            sub_end = sub_start + 20
+            sub_correct = sum(1 for j in range(sub_start, sub_end) if st.session_state.user_answers.get(j) == questions[j]['answer'])
+            sub_score = sub_correct * 5 
+            subject_scores.append(sub_score)
+
+        col_tot1, col_tot2, col_tot3, col_tot4 = st.columns(4)
+        col_tot1.metric("총 점수", f"{total_score}점")
+        col_tot2.metric("맞은 문제", f"{correct_count}개")
+        col_tot3.metric("틀린 문제", f"{len(wrong_questions)}개")
+        
+        if total_score >= 60:
+            col_tot4.metric("최종 결과", "🟢 합격")
+            st.success("🎉 합격입니다! 기능사 시험은 과락이 없습니다. 평균 60점 이상을 달성했습니다.")
+        else:
+            col_tot4.metric("최종 결과", "🔴 불합격")
+            st.warning("⚠️ 불합격: 총점 60점에 도달하지 못했습니다.")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("##### 📌 과목별 상세 점수 (기능사는 과락이 없습니다)")
+        sub_cols = st.columns(3)
+        for i in range(3):
+            sub_cols[i].metric(f"제 {i+1}과목", f"{subject_scores[i]}점")
+
+    # 💡 [핵심 분기 3] 기타 문항수 (기본 90제, 꼼수 63문제 등 예외 훈련용)
     else:
-        st.warning("⚠️ 보완이 필요한 구간입니다. 아래 오답 분석 탭에 에너지를 집중하세요.")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("내 점수", f"{total_score}점")
+        col2.metric("맞은 문제", f"{correct_count}개")
+        col3.metric("틀린 문제", f"{len(wrong_questions)}개")
 
+        if total_score >= 60:
+            st.success("🎉 합격 기준(60점)을 안정적으로 충족했습니다! 이 견고한 흐름을 이어가세요.")
+        else:
+            st.warning("⚠️ 보완이 필요한 구간입니다. 아래 오답 분석 탭에 에너지를 집중하세요.")
+
+    st.markdown("---")
     tab1, tab2 = st.tabs(["📝 틀린 문제 (오답 노트)", "✅ 맞은 문제 다시보기"])
     
     with tab1:
