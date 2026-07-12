@@ -65,12 +65,12 @@ questions = [
         "num": "06",
         "q": "분말소화약제로서 ABC급 화재에 적용성이 있는 소화약제의 종류는?",
         "options": [
-            "① NH4H2PO4",
-            "② NaHCO3",
-            "③ Na2CO3",
-            "④ KHCO3"
+            "① NH₄H₂PO₄",
+            "② NaHCO₃",
+            "③ Na₂CO₃",
+            "④ KHCO₃"
         ],
-        "answer": "① NH4H2PO4",
+        "answer": "① NH₄H₂PO₄",
         "explanation": "제3종 분말소화약제의 주성분인 제1인산암모늄(NH4H2PO4)은 A, B, C급 화재 모두에 적용 가능합니다."
     },
     {
