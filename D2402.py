@@ -337,7 +337,7 @@ questions = [
             "③",
             "④"
         ],
-        "answer": "④",
+        "answer": "①",
         "explanation": "불대수의 흡수법칙에 의해 X + XY = X(1 + Y) 가 되며, (1 + Y)는 항상 1이므로 최종 논리식은 X로 간략화된다.",
         "image": "images/D240228.png"
     },
