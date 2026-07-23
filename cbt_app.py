@@ -92,18 +92,42 @@ current_img_width = 450 if st.session_state.img_expanded else 250
 tab_img_width = 400 if st.session_state.img_expanded else 200
 
 
+# ---------------------------------------------------------
 # 4. 우측 고정형 실시간 OMR 사이드바 및 흐름 제어 스위치
+# ---------------------------------------------------------
 with st.sidebar:
     st.header("📋 OMR 답안지")
     
     if not st.session_state.submitted:
-        st.info("문제를 풀면 답안이 실시간으로 기록됩니다.")
+        # 풀이 진행률 계산
         answered_count = len([ans for ans in st.session_state.user_answers.values() if ans is not None])
-        st.progress(answered_count / len(questions), text=f"풀이 진행률: {answered_count} / {len(questions)}")
+        unanswered_count = len(questions) - answered_count
         
+        st.progress(answered_count / len(questions), text=f"진행률: {answered_count}/{len(questions)} (미풀음: {unanswered_count}개)")
+        
+        # 📌 미풀음 문제 클릭 시 해당 페이지로 바로 이동하는 OMR 현황판
+        with st.expander("📌 문제별 작성 현황 (클릭 시 이동)", expanded=True):
+            # 5열 그리드로 문제 번호 배치
+            cols = st.columns(5)
+            for idx in range(len(questions)):
+                q_num = idx + 1
+                is_answered = st.session_state.user_answers.get(idx) is not None
+                
+                # 풀었으면 🟢, 안 풀었으면 ⚪ 표시
+                label = f"🟢{q_num}" if is_answered else f"⚪{q_num}"
+                
+                # 버튼을 누르면 해당 문항이 있는 페이지로 계산하여 이동
+                col_idx = idx % 5
+                if cols[col_idx].button(label, key=f"omr_btn_{idx}", use_container_width=True):
+                    st.session_state.current_page = (idx // QUESTIONS_PER_PAGE) + 1
+                    st.rerun()
+
         if st.button("✅ 최종 답안 제출 및 채점", type="primary", use_container_width=True):
+            if unanswered_count > 0:
+                st.warning(f"⚠️ 아직 풀지 않은 문제가 {unanswered_count}개 있습니다!")
             st.session_state.submitted = True
             st.rerun()
+            
     else:
         st.success("채점이 완료되었습니다.")
         if st.button("🔄 다른 시험 보기 (초기화)", use_container_width=True):
