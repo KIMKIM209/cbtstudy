@@ -287,7 +287,7 @@ questions = [
             "③",
             "④"
         ],
-        "answer": "②",
+        "answer": "①",
         "explanation": "미분방정식을 라플라스 변환하면 (2s^2 + 3s + 1)C(s) = (3s + 1)R(s)가 되므로, 전달함수 C(s)/R(s) = (3s + 1) / (2s^2 + 3s + 1)입니다.",
         "image": "images/D230424.png"
     },
