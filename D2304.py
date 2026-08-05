@@ -325,8 +325,8 @@ questions = [
             "③",
             "④"
         ],
-        "answer": "①",
-        "explanation": "논리회로 및 시퀀스 접점의 연결 메커니즘 상, A와 B가 병렬접점(+)이고 직렬로 A의 AND 공정인 b접점(A바)이 오므로 (A + B) • A바가 성립합니다.",
+        "answer": "②",
+        "explanation": "상단/하단 전체: 상단 가지(\bar{A})와 하단 가지(AB)가 **병렬(OR, +)**로 연결되어 있으므로 \rightarrow \bar{A} + AB 따라서 시퀀스 회로를 논리식으로 나타내면 AB + \bar{A} 가 됩니다.",
         "image": "images/D230427.png"
     },
     {
