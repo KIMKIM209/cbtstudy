@@ -3,6 +3,8 @@ import streamlit as st
 import importlib
 import math
 import re
+import time
+import datetime
 
 # 화면을 넓게 쓰는 실전형 와이드 레이아웃
 st.set_page_config(page_title="국가기술자격 실전 CBT", page_icon="⚡", layout="wide")
@@ -55,6 +57,12 @@ if 'wrong_counts' not in st.session_state:
 if 'img_expanded' not in st.session_state:
     st.session_state.img_expanded = False
 
+# 타이머 세션 변수
+if 'start_time' not in st.session_state:
+    st.session_state.start_time = time.time()
+if 'end_time' not in st.session_state:
+    st.session_state.end_time = None
+
 # 상단 메뉴
 exam_choice = st.selectbox(
     "📝 응시할 기출문제를 선택하세요:",
@@ -68,6 +76,9 @@ if exam_choice != st.session_state.selected_exam_name:
     st.session_state.user_answers = {}
     st.session_state.submitted = False
     st.session_state.current_page = 1
+    # 다른 시험 선택 시 타이머 리셋
+    st.session_state.start_time = time.time()
+    st.session_state.end_time = None
     st.rerun()
 
 selected_module_name = st.session_state.current_exam
@@ -98,7 +109,15 @@ tab_img_width = 400 if st.session_state.img_expanded else 200
 with st.sidebar:
     st.header("📋 OMR 답안지")
     
+    # 문항 수에 따른 제한 시간 동적 계산 (기사급 1.5분, 기능사급 1분)
+    limit_minutes = int(len(questions) * 1.5) if len(questions) >= 80 else len(questions)
+    
     if not st.session_state.submitted:
+        # 현재 경과 시간 계산 및 표시
+        elapsed_seconds = int(time.time() - st.session_state.start_time)
+        elapsed_td = datetime.timedelta(seconds=elapsed_seconds)
+        st.info(f"⏳ **제한 시간:** {limit_minutes}분\n\n⏱️ **진행 시간:** {elapsed_td} (클릭 시 갱신)")
+
         # 풀이 진행률 계산
         answered_count = len([ans for ans in st.session_state.user_answers.values() if ans is not None])
         unanswered_count = len(questions) - answered_count
@@ -126,6 +145,7 @@ with st.sidebar:
             if unanswered_count > 0:
                 st.warning(f"⚠️ 아직 풀지 않은 문제가 {unanswered_count}개 있습니다!")
             st.session_state.submitted = True
+            st.session_state.end_time = time.time()  # 제출 완료 시점 기록
             st.rerun()
             
     else:
@@ -134,6 +154,9 @@ with st.sidebar:
             st.session_state.user_answers = {}
             st.session_state.submitted = False
             st.session_state.current_page = 1
+            # 초기화 시 타이머 리셋
+            st.session_state.start_time = time.time()
+            st.session_state.end_time = None
             st.rerun()
 
     st.markdown("---")
@@ -358,7 +381,14 @@ else:
 
     total_score = int((correct_count / len(questions)) * 100)
     
+    # 소요 시간 포맷팅 로직
+    total_seconds = int(st.session_state.end_time - st.session_state.start_time)
+    taken_minutes, taken_seconds = divmod(total_seconds, 60)
+    limit_minutes = int(len(questions) * 1.5) if len(questions) >= 80 else len(questions)
+    
     st.header("📊 최종 채점 결과")
+    st.markdown(f"**⏱️ 총 소요 시간:** `{taken_minutes}분 {taken_seconds}초` / 제한 시간 `{limit_minutes}분`")
+    st.markdown("---")
     
     # 💡 [핵심 분기 1] 동적 과락 판별 알고리즘: 80문항(4과목) 또는 100문항(5과목) 기사 시험
     if len(questions) in [80, 100]:
