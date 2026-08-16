@@ -17,36 +17,42 @@ st.markdown("""
     
     /* 상단 배너 */
     .cbt-banner {
-        background-color: #0078d7; color: white;
-        padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+        background-color: #00a2e8; color: white;
+        padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
     }
     .cbt-banner .title { font-size: 24px; font-weight: 900; margin: 0; letter-spacing: -1px;}
-    .cbt-banner .info { font-size: 16px; font-weight: 600; text-align: right; line-height: 1.4;}
+    .cbt-banner .info { font-size: 15px; font-weight: 600; text-align: right; line-height: 1.4;}
     
     /* 우측 OMR 패널 (풀이 화면용) */
     .omr-header { background-color: #4a7ebb; color: white; text-align: center; padding: 10px; font-size: 16px; font-weight: bold; margin-bottom: 0px;}
     .bottom-bar { margin-top: 20px; padding-top: 15px; border-top: 2px solid #ddd;}
     
-    /* 리뷰 화면 (제출 전 확인) CSS */
-    .review-container { display: flex; gap: 20px; margin-top: 20px; }
-    .review-info-panel { flex: 1; border: 1px solid #ddd; padding: 0; background: #fff; height: fit-content; }
-    .review-info-header { background: #008CBA; color: white; text-align: center; padding: 10px; font-weight: bold; font-size: 18px; }
-    .review-info-body { padding: 20px; font-size: 14px; line-height: 2; }
-    .review-omr-panel { flex: 4; border: 1px solid #ddd; background: #fff; }
+    /* 리뷰 화면 (제출 전 확인) CSS - 큐넷 완벽 동기화 */
+    .review-container { display: flex; gap: 15px; margin-top: 10px; }
+    .review-info-panel { flex: 1.5; border: 2px solid #ddd; background: #fff; height: fit-content; }
+    .review-info-header { background: #008CBA; color: white; text-align: center; padding: 12px; font-weight: bold; font-size: 18px; }
+    .review-info-body { padding: 20px; font-size: 14px; line-height: 2.2; }
+    
+    .review-omr-panel { flex: 8.5; border: 2px solid #4a7ebb; background: #fff; }
     .review-omr-header { background: #4a7ebb; color: white; text-align: center; padding: 10px; font-weight: bold; font-size: 18px; }
     
-    .omr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 2px; padding: 15px; }
-    .omr-item { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px dotted #ccc; padding: 4px 10px; font-size: 14px; }
-    .omr-item.unanswered { background-color: #ffe6e6; border: 1px solid #ff4b4b; font-weight: bold; } /* 안 푼 문제 강조 */
-    .omr-num { color: #ff4b4b; width: 30px; font-weight: bold; }
-    .omr-dots { display: flex; gap: 5px; color: #ccc; }
-    .omr-dot.selected { color: #000; font-weight: bold; }
+    /* 리뷰 화면 OMR 20문제 단위 컬럼 그리드 */
+    .omr-review-grid { display: grid; gap: 5px; padding: 10px; background: #f9f9f9;}
+    .omr-col { display: flex; flex-direction: column; background: #fff; border: 1px solid #ddd; }
+    .omr-subject-header { background: #5b9bd5; color: white; text-align: center; font-weight: bold; padding: 8px 0; font-size: 14px; margin-bottom: 5px;}
+    .omr-row { display: flex; align-items: center; justify-content: center; gap: 15px; padding: 4px 10px; font-size: 15px; border-bottom: 1px dashed #eee;}
+    .omr-row:last-child { border-bottom: none; }
+    
+    /* 미마킹 강조 (노란색 배경) */
+    .omr-row.unanswered { background-color: #ffe699; font-weight: bold; border: 1px solid #ff4b4b;}
+    
+    .omr-num { color: #d9534f; width: 25px; font-weight: bold; text-align: center;}
+    .omr-dots { display: flex; gap: 8px; }
     
     /* 최종 결과 화면 CSS */
     .result-banner { padding: 30px; text-align: center; color: white; margin-bottom: 20px; font-size: 26px; font-weight: bold; border-radius: 5px; }
-    .result-pass { background-color: #0078d7; } /* 합격 파란색 */
-    .result-fail { background-color: #d9534f; } /* 불합격 빨간색 */
-    
+    .result-pass { background-color: #0078d7; } 
+    .result-fail { background-color: #d9534f; } 
     .result-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 16px; text-align: center; }
     .result-table th { background-color: #f2f2f2; border: 1px solid #ddd; padding: 12px; font-weight: bold; }
     .result-table td { border: 1px solid #ddd; padding: 12px; }
@@ -87,18 +93,17 @@ exam_mapping = {
 }
 exam_list = list(exam_mapping.keys())
 
-# --- 3. 전역 세션 상태 통제 (review_mode 추가) ---
+# --- 3. 전역 세션 상태 통제 ---
 if 'selected_exam_name' not in st.session_state: st.session_state.selected_exam_name = exam_list[0]
 if 'current_exam' not in st.session_state: st.session_state.current_exam = exam_mapping[exam_list[0]]
 if 'user_answers' not in st.session_state: st.session_state.user_answers = {}
-if 'review_mode' not in st.session_state: st.session_state.review_mode = False # 제출 전 확인 화면 상태
-if 'submitted' not in st.session_state: st.session_state.submitted = False # 최종 제출 완료 상태
+if 'review_mode' not in st.session_state: st.session_state.review_mode = False 
+if 'submitted' not in st.session_state: st.session_state.submitted = False 
 if 'current_page' not in st.session_state: st.session_state.current_page = 1
 if 'start_time' not in st.session_state: st.session_state.start_time = time.time()
 if 'end_time' not in st.session_state: st.session_state.end_time = None
 if 'img_expanded' not in st.session_state: st.session_state.img_expanded = False
 
-# 인터페이스 설정 모드 (평소엔 숨김)
 with st.expander("⚙️ 시험 선택 및 설정 (초기화)"):
     col_set1, col_set2 = st.columns([3, 1])
     with col_set1:
@@ -141,14 +146,14 @@ today_str = datetime.datetime.now().strftime("%Y-%m-%d")
 
 
 # =====================================================================
-# 5. [STEP 1] 문제 풀이 화면 (solve mode)
+# 5. [STEP 1] 문제 풀이 화면
 # =====================================================================
 if not st.session_state.review_mode and not st.session_state.submitted:
     st.markdown(f"""
     <div class="cbt-banner">
-        <div class="title">자격검정 CBT </div>
+        <div class="title">01 {st.session_state.selected_exam_name}</div>
         <div class="info">
-            수험번호 : 0000001<br>
+            수험번호 : 000001<br>
             수험자명 : 홍길동<br>
             남은시간 : {remain_td}
         </div>
@@ -192,7 +197,6 @@ if not st.session_state.review_mode and not st.session_state.submitted:
                     st.rerun()
         with btn_col4:
             if st.button("✅ 답안 제출", type="primary", use_container_width=True):
-                # 💡 최종 제출이 아닌, 리뷰 모드로 먼저 전환합니다.
                 st.session_state.review_mode = True
                 st.rerun()
 
@@ -210,74 +214,95 @@ if not st.session_state.review_mode and not st.session_state.submitted:
 
 
 # =====================================================================
-# 6. [STEP 2] 제출 전 OMR 검토 화면 (review mode)
+# 6. [STEP 2] 제출 전 OMR 검토 화면 (큐넷 스타일 완벽 구현)
 # =====================================================================
 elif st.session_state.review_mode and not st.session_state.submitted:
     st.markdown(f"""
     <div class="cbt-banner">
-        <div class="title">✅ {st.session_state.selected_exam_name}</div>
-        <div class="info">수험번호: 1000007 | 수험자명: 김영준</div>
+        <div class="title">01 {st.session_state.selected_exam_name}</div>
+        <div class="info">수험번호: 000001 | 수험자명: 홍길동</div>
     </div>
     """, unsafe_allow_html=True)
 
     unanswered_count = len(questions) - len(st.session_state.user_answers)
     if unanswered_count > 0:
-        st.error(f"⚠️ 아직 풀지 않은 문제가 **{unanswered_count}개** 있습니다. 붉은색으로 표시된 문항을 확인하세요.")
+        st.warning(f"⚠️ 아직 풀지 않은 문제가 **{unanswered_count}개** 있습니다. 노란색으로 표시된 문항을 확인하세요.")
     else:
         st.success("모든 문항의 답안 표기가 완료되었습니다.")
 
-    # 좌측 수험자 정보 / 우측 전체 OMR 렌더링
+    # 20문제씩 끊어서 열(Column) 개수 계산
+    total_q = len(questions)
+    cols_count = math.ceil(total_q / 20)
+    grid_template = f"repeat({cols_count}, 1fr)"
+    
     html_review = f"""
     <div class="review-container">
         <div class="review-info-panel">
             <div class="review-info-header">수험자 정보</div>
             <div class="review-info-body">
-                <b>시험명:</b> {st.session_state.selected_exam_name[:15]}...<br>
-                <b>시험일자:</b> {today_str}<br>
-                <b>수험번호:</b> 1000007<br>
-                <b>수험자명:</b> 김영준<br><br>
+                <b>시험명:</b><br>{st.session_state.selected_exam_name[:20]}<br><br>
+                <b>시험일자:</b> {today_str}<br><br>
+                <b>부:</b> 1<br><br>
+                <b>수험번호:</b> 000001<br><br>
+                <b>수험자명:</b> 홍길동<br><br>
                 <b>남은시간:</b> {remain_td}
             </div>
         </div>
         
         <div class="review-omr-panel">
             <div class="review-omr-header">답안표기란</div>
-            <div class="omr-grid">
+            <div class="omr-review-grid" style="grid-template-columns: {grid_template};">
     """
     
-    # OMR 마킹 시각화
-    for idx, item in enumerate(questions):
-        q_num = f"{idx + 1:02d}"
-        ans = st.session_state.user_answers.get(idx)
-        ans_idx = item['options'].index(ans) + 1 if ans in item['options'] else None
+    # 각 단(Column)별 생성
+    for col_idx in range(cols_count):
+        html_review += f'<div class="omr-col">'
+        html_review += f'<div class="omr-subject-header">제 {col_idx + 1}과목</div>'
         
-        row_class = "omr-item unanswered" if ans_idx is None else "omr-item"
+        start_q = col_idx * 20
+        end_q = min(start_q + 20, total_q)
         
-        dots = ""
-        for opt_num in range(1, 5):
-            if opt_num == ans_idx:
-                dots += f'<span class="omr-dot selected">⚫</span>'
-            else:
-                dots += f'<span class="omr-dot">①②③④'[opt_num-1:opt_num] + '</span>'
-                
-        html_review += f'<div class="{row_class}"><span class="omr-num">{q_num}</span><div class="omr-dots">{dots}</div></div>'
+        for idx in range(start_q, end_q):
+            q_num = f"{idx + 1:02d}"
+            ans = st.session_state.user_answers.get(idx)
+            ans_idx = None
+            if ans and ans in questions[idx]['options']:
+                ans_idx = questions[idx]['options'].index(ans) + 1
+            
+            row_class = "omr-row unanswered" if ans_idx is None else "omr-row"
+            
+            dots = ""
+            for opt_num in range(1, 5):
+                if opt_num == ans_idx:
+                    # 선택된 답안은 검정색 까만 동그라미
+                    dots += '<span style="color:#000; font-size:16px;">⚫</span>'
+                else:
+                    # 미선택 답안은 빨간색 원형 숫자 (버그 수정됨)
+                    circle_char = "①②③④"[opt_num - 1]
+                    dots += f'<span style="color:#d9534f; font-size:15px; opacity:0.6;">{circle_char}</span>'
+                    
+            html_review += f'<div class="{row_class}"><span class="omr-num">{q_num}</span><div class="omr-dots">{dots}</div></div>'
+            
+        html_review += '</div>' # omr-col 닫기
 
     html_review += """
             </div>
-            <div style="padding: 10px 15px; color: #d9534f; font-size: 13px;">* 미표기된 문항은 오답 처리됩니다. 최종 제출 전 반드시 확인하세요.</div>
+            <div style="padding: 10px 15px; color: #d9534f; font-size: 13px; font-weight:bold;">
+                * 문항번호를 클릭하면 해당 문항으로 이동합니다. (현재 구현은 이전 화면 복귀 기능 제공)
+            </div>
         </div>
     </div>
     """
     st.markdown(html_review, unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
-    col_btn1, col_btn2 = st.columns(2)
+    col_btn1, col_btn2, col_btn3 = st.columns([2, 6, 2])
     with col_btn1:
-        if st.button("↩️ 답안 수정 (풀이 화면으로 돌아가기)", use_container_width=True):
+        if st.button("↩️ 답안 수정", use_container_width=True):
             st.session_state.review_mode = False
             st.rerun()
-    with col_btn2:
-        if st.button("답안 최종 제출 ➡", type="primary", use_container_width=True):
+    with col_btn3:
+        if st.button("2️⃣ 답안 최종 제출 ➡", type="primary", use_container_width=True):
             st.session_state.review_mode = False
             st.session_state.submitted = True
             st.session_state.end_time = time.time()
@@ -302,7 +327,6 @@ elif st.session_state.submitted:
 
     total_score = int((correct_count / len(questions)) * 100)
     
-    # --- 합격/불합격 판정 로직 ---
     is_pass = False
     is_fail_by_subject = False
     subject_scores = []
@@ -329,7 +353,6 @@ elif st.session_state.submitted:
         is_pass = (total_score >= 60)
         final_score_display = str(total_score)
 
-    # --- 직관적 결과 화면 렌더링 (파랑/빨강) ---
     banner_class = "result-pass" if is_pass else "result-fail"
     banner_msg = "합격을 축하드립니다." if is_pass else "불합격입니다. 부족한 부분을 보완하여 다시 도전하세요."
     status_text = "합격" if is_pass else "불합격"
@@ -347,7 +370,7 @@ elif st.session_state.submitted:
         </tr>
         <tr>
             <th>응시종목</th>
-            <td>{st.session_state.selected_exam_name[:15]}...</td>
+            <td>{st.session_state.selected_exam_name[:20]}</td>
         </tr>
         <tr>
             <th>득점</th>
@@ -360,7 +383,6 @@ elif st.session_state.submitted:
     </table>
     """, unsafe_allow_html=True)
     
-    # 과목별 상세 (기사/기능사 등 분리형 시험인 경우만)
     if subject_scores:
         sub_html = "<table class='result-table'><tr><th>세부과목명</th><th>득점</th><th>비고(과락)</th></tr>"
         for i, score in enumerate(subject_scores):
@@ -371,7 +393,7 @@ elif st.session_state.submitted:
 
     col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
     with col_btn2:
-        if st.button("확인 완료 (메인으로 돌아가기)", type="primary", use_container_width=True):
+        if st.button("1️⃣ 확인 완료 (메인으로 돌아가기)", type="primary", use_container_width=True):
             st.session_state.user_answers = {}
             st.session_state.review_mode = False
             st.session_state.submitted = False
@@ -382,7 +404,6 @@ elif st.session_state.submitted:
 
     st.markdown("---")
     
-    # --- 오답 노트 ---
     tab1, tab2 = st.tabs(["📝 틀린 문제 (오답 노트)", "✅ 맞은 문제 다시보기"])
     tab_img_width = 400 if st.session_state.img_expanded else 250
     
