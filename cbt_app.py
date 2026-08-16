@@ -146,7 +146,7 @@ today_str = datetime.datetime.now().strftime("%Y-%m-%d")
 if not st.session_state.review_mode and not st.session_state.submitted:
     st.markdown(f"""
     <div class="cbt-banner">
-        <div class="title">자격검정 CBT 웹체험 문제풀이</div>
+        <div class="title">자격검정 CBT </div>
         <div class="info">
             수험번호 : 0000001<br>
             수험자명 : 홍길동<br>
