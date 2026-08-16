@@ -7,32 +7,58 @@ import time
 import datetime
 
 # --- 1. 기본 설정 및 실전 CBT 전용 CSS ---
-# 사이드바를 숨기고 넓은 화면을 강제하여 실전 몰입도를 극대화합니다.
 st.set_page_config(page_title="국가기술자격 실전 CBT", page_icon="⚡", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
+    /* 기본 UI 숨김 */
     header[data-testid="stHeader"] {display: none;}
     section[data-testid="stSidebar"] {display: none;}
     
+    /* 상단 배너 */
     .cbt-banner {
-        background-color: #f0f4f8; border-top: 4px solid #0056b3; border-bottom: 2px solid #0056b3;
+        background-color: #0078d7; color: white;
         padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
     }
-    .cbt-banner .title { font-size: 24px; font-weight: 900; color: #0056b3; margin: 0; letter-spacing: -1px;}
-    .cbt-banner .info { font-size: 16px; font-weight: 600; color: #333; margin: 0; line-height: 1.5;}
-    .cbt-timer { font-size: 16px; font-weight: 700; color: #d9534f; margin: 0; line-height: 1.5; text-align: right;}
+    .cbt-banner .title { font-size: 24px; font-weight: 900; margin: 0; letter-spacing: -1px;}
+    .cbt-banner .info { font-size: 16px; font-weight: 600; text-align: right; line-height: 1.4;}
     
+    /* 우측 OMR 패널 (풀이 화면용) */
     .omr-header { background-color: #4a7ebb; color: white; text-align: center; padding: 10px; font-size: 16px; font-weight: bold; margin-bottom: 0px;}
-    .omr-container { border: 1px solid #ddd; border-top: none; padding: 15px; height: 650px; overflow-y: auto; background-color: #fafafa;}
     .bottom-bar { margin-top: 20px; padding-top: 15px; border-top: 2px solid #ddd;}
     
-    /* 보기 라디오 버튼 간격 최적화 */
+    /* 리뷰 화면 (제출 전 확인) CSS */
+    .review-container { display: flex; gap: 20px; margin-top: 20px; }
+    .review-info-panel { flex: 1; border: 1px solid #ddd; padding: 0; background: #fff; height: fit-content; }
+    .review-info-header { background: #008CBA; color: white; text-align: center; padding: 10px; font-weight: bold; font-size: 18px; }
+    .review-info-body { padding: 20px; font-size: 14px; line-height: 2; }
+    .review-omr-panel { flex: 4; border: 1px solid #ddd; background: #fff; }
+    .review-omr-header { background: #4a7ebb; color: white; text-align: center; padding: 10px; font-weight: bold; font-size: 18px; }
+    
+    .omr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 2px; padding: 15px; }
+    .omr-item { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px dotted #ccc; padding: 4px 10px; font-size: 14px; }
+    .omr-item.unanswered { background-color: #ffe6e6; border: 1px solid #ff4b4b; font-weight: bold; } /* 안 푼 문제 강조 */
+    .omr-num { color: #ff4b4b; width: 30px; font-weight: bold; }
+    .omr-dots { display: flex; gap: 5px; color: #ccc; }
+    .omr-dot.selected { color: #000; font-weight: bold; }
+    
+    /* 최종 결과 화면 CSS */
+    .result-banner { padding: 30px; text-align: center; color: white; margin-bottom: 20px; font-size: 26px; font-weight: bold; border-radius: 5px; }
+    .result-pass { background-color: #0078d7; } /* 합격 파란색 */
+    .result-fail { background-color: #d9534f; } /* 불합격 빨간색 */
+    
+    .result-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 16px; text-align: center; }
+    .result-table th { background-color: #f2f2f2; border: 1px solid #ddd; padding: 12px; font-weight: bold; }
+    .result-table td { border: 1px solid #ddd; padding: 12px; }
+    .result-score-pass { color: #0078d7; font-weight: bold; }
+    .result-score-fail { color: #d9534f; font-weight: bold; }
+    
+    /* 보기 라디오 버튼 간격 */
     .stRadio > div { gap: 10px; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. 기출문제 데이터베이스 매핑 ---
+# --- 2. 기출문제 매핑 ---
 exam_mapping = {
     "26년도 소방설비기사(전기) 2회차 시험 (202602)": "2602", 
     "26년도 소방설비기사(전기) 1회차 시험 (202601)": "2601", 
@@ -61,28 +87,22 @@ exam_mapping = {
 }
 exam_list = list(exam_mapping.keys())
 
-# --- 3. 전역 세션 상태 통제 ---
-if 'selected_exam_name' not in st.session_state:
-    st.session_state.selected_exam_name = exam_list[0]
-    st.session_state.current_exam = exam_mapping[exam_list[0]]
-if 'user_answers' not in st.session_state:
-    st.session_state.user_answers = {}
-if 'submitted' not in st.session_state:
-    st.session_state.submitted = False
-if 'current_page' not in st.session_state:
-    st.session_state.current_page = 1
-if 'start_time' not in st.session_state:
-    st.session_state.start_time = time.time()
-if 'end_time' not in st.session_state:
-    st.session_state.end_time = None
-if 'img_expanded' not in st.session_state:
-    st.session_state.img_expanded = False
+# --- 3. 전역 세션 상태 통제 (review_mode 추가) ---
+if 'selected_exam_name' not in st.session_state: st.session_state.selected_exam_name = exam_list[0]
+if 'current_exam' not in st.session_state: st.session_state.current_exam = exam_mapping[exam_list[0]]
+if 'user_answers' not in st.session_state: st.session_state.user_answers = {}
+if 'review_mode' not in st.session_state: st.session_state.review_mode = False # 제출 전 확인 화면 상태
+if 'submitted' not in st.session_state: st.session_state.submitted = False # 최종 제출 완료 상태
+if 'current_page' not in st.session_state: st.session_state.current_page = 1
+if 'start_time' not in st.session_state: st.session_state.start_time = time.time()
+if 'end_time' not in st.session_state: st.session_state.end_time = None
+if 'img_expanded' not in st.session_state: st.session_state.img_expanded = False
 
-# (인터페이스 설정 모드 - 실전 UI를 해치지 않도록 숨김 처리)
-with st.expander("⚙️ 시험 선택 및 설정 (클릭하여 열기)"):
+# 인터페이스 설정 모드 (평소엔 숨김)
+with st.expander("⚙️ 시험 선택 및 설정 (초기화)"):
     col_set1, col_set2 = st.columns([3, 1])
     with col_set1:
-        exam_choice = st.selectbox("📝 응시할 기출문제를 선택하세요:", exam_list, index=exam_list.index(st.session_state.selected_exam_name))
+        exam_choice = st.selectbox("📝 응시할 기출문제:", exam_list, index=exam_list.index(st.session_state.selected_exam_name))
     with col_set2:
         st.markdown("<br>", unsafe_allow_html=True)
         st.toggle("🔍 그림 크게 보기", key="img_expanded")
@@ -91,13 +111,14 @@ with st.expander("⚙️ 시험 선택 및 설정 (클릭하여 열기)"):
         st.session_state.selected_exam_name = exam_choice
         st.session_state.current_exam = exam_mapping[exam_choice]
         st.session_state.user_answers = {}
+        st.session_state.review_mode = False
         st.session_state.submitted = False
         st.session_state.current_page = 1
         st.session_state.start_time = time.time()
         st.session_state.end_time = None
         st.rerun()
 
-# --- 4. 데이터 로드 및 환경 변수 계산 ---
+# --- 4. 데이터 로드 ---
 selected_module_name = st.session_state.current_exam
 try:
     exam_module = importlib.import_module(selected_module_name)
@@ -111,71 +132,55 @@ total_pages = math.ceil(len(questions) / QUESTIONS_PER_PAGE)
 limit_minutes = int(len(questions) * 1.5) if len(questions) >= 80 else len(questions)
 current_img_width = 450 if st.session_state.img_expanded else 250
 
-# --- 5. 화면 렌더링 (제출 전 / 실전 CBT 모드) ---
-if not st.session_state.submitted:
-    elapsed_seconds = int(time.time() - st.session_state.start_time)
-    remain_seconds = max((limit_minutes * 60) - elapsed_seconds, 0)
-    remain_td = datetime.timedelta(seconds=remain_seconds)
-    
-    # [상단 CBT 배너]
+elapsed_seconds = int(time.time() - st.session_state.start_time)
+if st.session_state.end_time:
+    elapsed_seconds = int(st.session_state.end_time - st.session_state.start_time)
+remain_seconds = max((limit_minutes * 60) - elapsed_seconds, 0)
+remain_td = datetime.timedelta(seconds=remain_seconds)
+today_str = datetime.datetime.now().strftime("%Y-%m-%d")
+
+
+# =====================================================================
+# 5. [STEP 1] 문제 풀이 화면 (solve mode)
+# =====================================================================
+if not st.session_state.review_mode and not st.session_state.submitted:
     st.markdown(f"""
     <div class="cbt-banner">
         <div class="title">자격검정 CBT 웹체험 문제풀이</div>
         <div class="info">
-            수험번호 : <span style="color:#0056b3;">00000000</span><br>
-            수험자명 : <span style="color:#0056b3;">김영준 (수험자)</span>
-        </div>
-        <div class="cbt-timer">
-            ⏱️ 제한 시간 : {limit_minutes}분<br>
-            남은 시간 : {remain_td}
+            수험번호 : 1000007<br>
+            수험자명 : 김영준<br>
+            남은시간 : {remain_td}
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # [핵심] 메인 레이아웃 분할 (좌측 문제 7.5 : 우측 OMR 2.5)
     col_main, col_omr = st.columns([7.5, 2.5], gap="large")
     
     with col_main:
-        # 좌측 문제 풀이 영역
         start_idx = (st.session_state.current_page - 1) * QUESTIONS_PER_PAGE
         end_idx = min(start_idx + QUESTIONS_PER_PAGE, len(questions))
         page_questions = questions[start_idx:end_idx]
         
         for i, item in enumerate(page_questions):
             actual_idx = start_idx + i 
-            
             st.markdown(f"**{item['num']}. {item['q']}**")
-            
             if item.get("image"):
-                try:
-                    st.image(item["image"], width=current_img_width)
-                except Exception:
-                    pass
+                try: st.image(item["image"], width=current_img_width)
+                except Exception: pass
             
             ans = st.session_state.user_answers.get(actual_idx)
-            try:
-                ans_index = item['options'].index(ans) if ans else None
-            except ValueError:
-                ans_index = None
+            ans_index = item['options'].index(ans) if ans in item['options'] else None
             
-            choice = st.radio(
-                label="보기 선택", 
-                options=item['options'], 
-                key=f"q_{actual_idx}", 
-                index=ans_index,
-                label_visibility="collapsed" 
-            )
+            choice = st.radio("보기 선택", item['options'], key=f"q_{actual_idx}", index=ans_index, label_visibility="collapsed")
             st.session_state.user_answers[actual_idx] = choice
             st.markdown("---")
             
-        # 하단 네비게이션 컨트롤
         st.markdown("<div class='bottom-bar'></div>", unsafe_allow_html=True)
         btn_col1, btn_col2, btn_col3, btn_col4 = st.columns([1.5, 2.5, 1.5, 2])
         
-        with btn_col1:
-            st.button("🧮 계산기", disabled=True, use_container_width=True)
-        with btn_col2:
-            st.markdown(f"<div style='text-align: center; padding-top: 5px;'><b>{st.session_state.current_page} / {total_pages} 페이지</b></div>", unsafe_allow_html=True)
+        with btn_col1: st.button("🧮 계산기", disabled=True, use_container_width=True)
+        with btn_col2: st.markdown(f"<div style='text-align: center; padding-top: 5px;'><b>{st.session_state.current_page} / {total_pages} 페이지</b></div>", unsafe_allow_html=True)
         with btn_col3:
             if st.session_state.current_page < total_pages:
                 if st.button("다음 ▶", use_container_width=True):
@@ -187,32 +192,102 @@ if not st.session_state.submitted:
                     st.rerun()
         with btn_col4:
             if st.button("✅ 답안 제출", type="primary", use_container_width=True):
-                st.session_state.submitted = True
-                st.session_state.end_time = time.time()
+                # 💡 최종 제출이 아닌, 리뷰 모드로 먼저 전환합니다.
+                st.session_state.review_mode = True
                 st.rerun()
 
     with col_omr:
-        # 우측 OMR 답안 현황판 (클릭 시 빠른 이동)
         st.markdown("<div class='omr-header'>답안 표기란 (클릭 시 이동)</div>", unsafe_allow_html=True)
-        
         with st.container(height=650):
             cols = st.columns(4)
             for idx in range(len(questions)):
                 q_num = idx + 1
                 is_answered = st.session_state.user_answers.get(idx) is not None
-                
-                # 마킹 시 초록색, 미마킹 시 회색 원 표시
                 btn_label = f"🟢 {q_num}" if is_answered else f"⚪ {q_num}"
-                col_idx = idx % 4
-                
-                if cols[col_idx].button(btn_label, key=f"omr_btn_{idx}", use_container_width=True):
+                if cols[idx % 4].button(btn_label, key=f"omr_btn_{idx}", use_container_width=True):
                     st.session_state.current_page = (idx // QUESTIONS_PER_PAGE) + 1
                     st.rerun()
 
-# --- 6. 화면 렌더링 (제출 후 / 결과 분석 모드) ---
-else:
-    st.markdown(f"### 📊 채점 결과 : {st.session_state.selected_exam_name}")
+
+# =====================================================================
+# 6. [STEP 2] 제출 전 OMR 검토 화면 (review mode)
+# =====================================================================
+elif st.session_state.review_mode and not st.session_state.submitted:
+    st.markdown(f"""
+    <div class="cbt-banner">
+        <div class="title">✅ {st.session_state.selected_exam_name}</div>
+        <div class="info">수험번호: 1000007 | 수험자명: 김영준</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    unanswered_count = len(questions) - len(st.session_state.user_answers)
+    if unanswered_count > 0:
+        st.error(f"⚠️ 아직 풀지 않은 문제가 **{unanswered_count}개** 있습니다. 붉은색으로 표시된 문항을 확인하세요.")
+    else:
+        st.success("모든 문항의 답안 표기가 완료되었습니다.")
+
+    # 좌측 수험자 정보 / 우측 전체 OMR 렌더링
+    html_review = f"""
+    <div class="review-container">
+        <div class="review-info-panel">
+            <div class="review-info-header">수험자 정보</div>
+            <div class="review-info-body">
+                <b>시험명:</b> {st.session_state.selected_exam_name[:15]}...<br>
+                <b>시험일자:</b> {today_str}<br>
+                <b>수험번호:</b> 1000007<br>
+                <b>수험자명:</b> 김영준<br><br>
+                <b>남은시간:</b> {remain_td}
+            </div>
+        </div>
+        
+        <div class="review-omr-panel">
+            <div class="review-omr-header">답안표기란</div>
+            <div class="omr-grid">
+    """
     
+    # OMR 마킹 시각화
+    for idx, item in enumerate(questions):
+        q_num = f"{idx + 1:02d}"
+        ans = st.session_state.user_answers.get(idx)
+        ans_idx = item['options'].index(ans) + 1 if ans in item['options'] else None
+        
+        row_class = "omr-item unanswered" if ans_idx is None else "omr-item"
+        
+        dots = ""
+        for opt_num in range(1, 5):
+            if opt_num == ans_idx:
+                dots += f'<span class="omr-dot selected">⚫</span>'
+            else:
+                dots += f'<span class="omr-dot">①②③④'[opt_num-1:opt_num] + '</span>'
+                
+        html_review += f'<div class="{row_class}"><span class="omr-num">{q_num}</span><div class="omr-dots">{dots}</div></div>'
+
+    html_review += """
+            </div>
+            <div style="padding: 10px 15px; color: #d9534f; font-size: 13px;">* 미표기된 문항은 오답 처리됩니다. 최종 제출 전 반드시 확인하세요.</div>
+        </div>
+    </div>
+    """
+    st.markdown(html_review, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button("↩️ 답안 수정 (풀이 화면으로 돌아가기)", use_container_width=True):
+            st.session_state.review_mode = False
+            st.rerun()
+    with col_btn2:
+        if st.button("답안 최종 제출 ➡", type="primary", use_container_width=True):
+            st.session_state.review_mode = False
+            st.session_state.submitted = True
+            st.session_state.end_time = time.time()
+            st.rerun()
+
+
+# =====================================================================
+# 7. [STEP 3] 최종 결과 화면 (submitted mode)
+# =====================================================================
+elif st.session_state.submitted:
     correct_count = 0
     wrong_questions = []
     correct_questions = []
@@ -227,91 +302,88 @@ else:
 
     total_score = int((correct_count / len(questions)) * 100)
     
-    total_seconds = int(st.session_state.end_time - st.session_state.start_time)
-    taken_minutes, taken_seconds = divmod(total_seconds, 60)
+    # --- 합격/불합격 판정 로직 ---
+    is_pass = False
+    is_fail_by_subject = False
+    subject_scores = []
     
-    st.info(f"⏱️ **소요 시간:** {taken_minutes}분 {taken_seconds}초 / 제한 {limit_minutes}분")
-    
-    # 합불 판정 분기 (기사급 80~100문항 과락 로직)
     if len(questions) in [80, 100]:
         num_subjects = len(questions) // 20
-        subject_scores = []
-        is_fail_by_subject = False
-        
         for i in range(num_subjects):
-            sub_start = i * 20
-            sub_end = sub_start + 20
-            sub_correct = sum(1 for j in range(sub_start, sub_end) if st.session_state.user_answers.get(j) == questions[j]['answer'])
+            sub_correct = sum(1 for j in range(i*20, i*20+20) if st.session_state.user_answers.get(j) == questions[j]['answer'])
             sub_score = sub_correct * 5 
             subject_scores.append(sub_score)
-            if sub_score < 40:
-                is_fail_by_subject = True
-
+            if sub_score < 40: is_fail_by_subject = True
+        
         avg_score = sum(subject_scores) / num_subjects
-        
-        col_tot1, col_tot2, col_tot3, col_tot4 = st.columns(4)
-        col_tot1.metric("총 평균 점수", f"{avg_score:.1f}점")
-        col_tot2.metric("맞은 문제", f"{correct_count}개")
-        col_tot3.metric("틀린 문제", f"{len(wrong_questions)}개")
-        
-        if avg_score >= 60 and not is_fail_by_subject:
-            col_tot4.metric("최종 결과", "🟢 합격")
-            st.success("🎉 합격입니다! 과락 방어 및 평균 점수를 달성했습니다.")
-        else:
-            col_tot4.metric("최종 결과", "🔴 불합격")
-            if is_fail_by_subject:
-                st.error("⚠️ 과락 발생: 40점 미만인 과목이 존재합니다.")
-            else:
-                st.warning("⚠️ 점수 미달: 과락은 없으나 전체 평균 60점에 도달하지 못했습니다.")
+        is_pass = (avg_score >= 60 and not is_fail_by_subject)
+        final_score_display = f"{avg_score:.1f}"
 
-        st.markdown("##### 📌 과목별 상세 (과락: 40점 미만)")
-        sub_cols = st.columns(num_subjects)
-        for i in range(num_subjects):
-            sub_status = "🔴 과락" if subject_scores[i] < 40 else "🟢 통과"
-            sub_cols[i].metric(f"제 {i+1}과목", f"{subject_scores[i]}점", sub_status, delta_color="off" if subject_scores[i] >= 40 else "inverse")
-
-    # (기능사급 60문항 과락 없음 로직)
     elif len(questions) == 60:
-        subject_scores = []
         for i in range(3):
-            sub_start = i * 20
-            sub_end = sub_start + 20
-            sub_correct = sum(1 for j in range(sub_start, sub_end) if st.session_state.user_answers.get(j) == questions[j]['answer'])
-            sub_score = sub_correct * 5 
-            subject_scores.append(sub_score)
-
-        col_tot1, col_tot2, col_tot3, col_tot4 = st.columns(4)
-        col_tot1.metric("총 점수", f"{total_score}점")
-        col_tot2.metric("맞은 문제", f"{correct_count}개")
-        col_tot3.metric("틀린 문제", f"{len(wrong_questions)}개")
-        
-        if total_score >= 60:
-            col_tot4.metric("최종 결과", "🟢 합격")
-        else:
-            col_tot4.metric("최종 결과", "🔴 불합격")
-
-        st.markdown("##### 📌 과목별 상세 (기능사 과락 없음)")
-        sub_cols = st.columns(3)
-        for i in range(3):
-            sub_cols[i].metric(f"제 {i+1}과목", f"{subject_scores[i]}점")
-
+            sub_correct = sum(1 for j in range(i*20, i*20+20) if st.session_state.user_answers.get(j) == questions[j]['answer'])
+            subject_scores.append(sub_correct * 5)
+        is_pass = (total_score >= 60)
+        final_score_display = str(total_score)
     else:
-        col1, col2, col3 = st.columns(3)
-        col1.metric("내 점수", f"{total_score}점")
-        col2.metric("맞은 문제", f"{correct_count}개")
-        col3.metric("틀린 문제", f"{len(wrong_questions)}개")
+        is_pass = (total_score >= 60)
+        final_score_display = str(total_score)
 
-    if st.button("🔄 메인으로 돌아가기 (초기화)", type="primary"):
-        st.session_state.user_answers = {}
-        st.session_state.submitted = False
-        st.session_state.current_page = 1
-        st.session_state.start_time = time.time()
-        st.session_state.end_time = None
-        st.rerun()
+    # --- 직관적 결과 화면 렌더링 (파랑/빨강) ---
+    banner_class = "result-pass" if is_pass else "result-fail"
+    banner_msg = "합격을 축하드립니다." if is_pass else "불합격입니다. 부족한 부분을 보완하여 다시 도전하세요."
+    status_text = "합격" if is_pass else "불합격"
+    status_class = "result-score-pass" if is_pass else "result-score-fail"
+
+    st.markdown(f"""
+    <div class="result-banner {banner_class}">
+        {banner_msg}
+    </div>
+    
+    <table class="result-table">
+        <tr>
+            <th>수험자 이름</th>
+            <td>김영준</td>
+        </tr>
+        <tr>
+            <th>응시종목</th>
+            <td>{st.session_state.selected_exam_name[:15]}...</td>
+        </tr>
+        <tr>
+            <th>득점</th>
+            <td class="{status_class}" style="font-size: 24px;">{final_score_display} 점</td>
+        </tr>
+        <tr>
+            <th>가채점결과</th>
+            <td class="{status_class}" style="font-size: 24px;">{status_text}</td>
+        </tr>
+    </table>
+    """, unsafe_allow_html=True)
+    
+    # 과목별 상세 (기사/기능사 등 분리형 시험인 경우만)
+    if subject_scores:
+        sub_html = "<table class='result-table'><tr><th>세부과목명</th><th>득점</th><th>비고(과락)</th></tr>"
+        for i, score in enumerate(subject_scores):
+            note = "<span style='color:red;font-weight:bold;'>과락</span>" if score < 40 and len(questions) != 60 else "-"
+            sub_html += f"<tr><td>제 {i+1}과목</td><td>{score}</td><td>{note}</td></tr>"
+        sub_html += "</table>"
+        st.markdown(sub_html, unsafe_allow_html=True)
+
+    col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+    with col_btn2:
+        if st.button("확인 완료 (메인으로 돌아가기)", type="primary", use_container_width=True):
+            st.session_state.user_answers = {}
+            st.session_state.review_mode = False
+            st.session_state.submitted = False
+            st.session_state.current_page = 1
+            st.session_state.start_time = time.time()
+            st.session_state.end_time = None
+            st.rerun()
 
     st.markdown("---")
-    tab1, tab2 = st.tabs(["📝 틀린 문제 (오답 노트)", "✅ 맞은 문제 다시보기"])
     
+    # --- 오답 노트 ---
+    tab1, tab2 = st.tabs(["📝 틀린 문제 (오답 노트)", "✅ 맞은 문제 다시보기"])
     tab_img_width = 400 if st.session_state.img_expanded else 250
     
     with tab1:
@@ -319,13 +391,12 @@ else:
             for wrong in wrong_questions:
                 item = wrong["item"]
                 my_ans = wrong["my_answer"]
-                with st.expander(f"Q{item['num']} 오답 분석"):
+                with st.expander(f"Q{item['num']} 오답 분석 (정답: {item['answer']})"):
                     st.write(f"**문제:** {item['q']}")
                     if item.get("image"):
                         try: st.image(item["image"], width=tab_img_width)
                         except Exception: pass
                     st.error(f"내 선택: {my_ans if my_ans else '미선택'}")
-                    st.success(f"정답: {item['answer']}")
                     st.info(f"💡 해설: {item['explanation']}")
         else:
             st.success("완벽합니다. 오답이 존재하지 않습니다.")
