@@ -56,8 +56,10 @@ st.markdown("""
     .result-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 16px; text-align: center; }
     .result-table th { background-color: #f2f2f2; border: 1px solid #ddd; padding: 12px; font-weight: bold; }
     .result-table td { border: 1px solid #ddd; padding: 12px; }
-    .result-score-pass { color: #0078d7; font-weight: bold; }
-    .result-score-fail { color: #d9534f; font-weight: bold; }
+    
+    /* 합격/불합격 폰트 2배 확장 (48px) */
+    .result-score-pass { color: #0078d7; font-weight: 900; font-size: 48px; }
+    .result-score-fail { color: #d9534f; font-weight: 900; font-size: 48px; }
     
     /* 보기 라디오 버튼 간격 */
     .stRadio > div { gap: 10px; }
@@ -149,16 +151,17 @@ today_str = datetime.datetime.now().strftime("%Y-%m-%d")
 # 5. [STEP 1] 문제 풀이 화면
 # =====================================================================
 if not st.session_state.review_mode and not st.session_state.submitted:
+    # 좌측 공백 제거 (들여쓰기 방지)
     st.markdown(f"""
-    <div class="cbt-banner">
-        <div class="title">01 {st.session_state.selected_exam_name}</div>
-        <div class="info">
-            수험번호 : 000001<br>
-            수험자명 : 홍길동<br>
-            남은시간 : {remain_td}
-        </div>
+<div class="cbt-banner">
+    <div class="title">01 {st.session_state.selected_exam_name}</div>
+    <div class="info">
+        수험번호 : 0001<br>
+        수험자명 : 홍길동<br>
+        남은시간 : {remain_td}
     </div>
-    """, unsafe_allow_html=True)
+</div>
+""", unsafe_allow_html=True)
 
     col_main, col_omr = st.columns([7.5, 2.5], gap="large")
     
@@ -214,53 +217,53 @@ if not st.session_state.review_mode and not st.session_state.submitted:
 
 
 # =====================================================================
-# 6. [STEP 2] 제출 전 OMR 검토 화면 (큐넷 스타일 완벽 구현)
+# 6. [STEP 2] 제출 전 OMR 검토 화면 (코드 렌더링 버그 및 카운트 수정)
 # =====================================================================
 elif st.session_state.review_mode and not st.session_state.submitted:
     st.markdown(f"""
-    <div class="cbt-banner">
-        <div class="title">01 {st.session_state.selected_exam_name}</div>
-        <div class="info">수험번호: 000001 | 수험자명: 홍길동</div>
-    </div>
-    """, unsafe_allow_html=True)
+<div class="cbt-banner">
+    <div class="title">01 {st.session_state.selected_exam_name}</div>
+    <div class="info">수험번호: 0001 | 수험자명: 홍길동</div>
+</div>
+""", unsafe_allow_html=True)
 
-    unanswered_count = len(questions) - len(st.session_state.user_answers)
+    # 💡 1. 미풀음 카운트 정확한 계산 로직 (None 값 제외)
+    answered_count = sum(1 for val in st.session_state.user_answers.values() if val is not None)
+    unanswered_count = len(questions) - answered_count
+
     if unanswered_count > 0:
         st.warning(f"⚠️ 아직 풀지 않은 문제가 **{unanswered_count}개** 있습니다. 노란색으로 표시된 문항을 확인하세요.")
     else:
         st.success("모든 문항의 답안 표기가 완료되었습니다.")
 
-    # 20문제씩 끊어서 열(Column) 개수 계산
-    total_q = len(questions)
-    cols_count = math.ceil(total_q / 20)
+    cols_count = math.ceil(len(questions) / 20)
     grid_template = f"repeat({cols_count}, 1fr)"
     
+    # 💡 2. 들여쓰기를 완벽히 제거하여 마크다운이 HTML을 코드블록으로 인식하지 않게 통제
     html_review = f"""
-    <div class="review-container">
-        <div class="review-info-panel">
-            <div class="review-info-header">수험자 정보</div>
-            <div class="review-info-body">
-                <b>시험명:</b><br>{st.session_state.selected_exam_name[:20]}<br><br>
-                <b>시험일자:</b> {today_str}<br><br>
-                <b>부:</b> 1<br><br>
-                <b>수험번호:</b> 000001<br><br>
-                <b>수험자명:</b> 홍길동<br><br>
-                <b>남은시간:</b> {remain_td}
-            </div>
-        </div>
-        
-        <div class="review-omr-panel">
-            <div class="review-omr-header">답안표기란</div>
-            <div class="omr-review-grid" style="grid-template-columns: {grid_template};">
-    """
+<div class="review-container">
+<div class="review-info-panel">
+<div class="review-info-header">수험자 정보</div>
+<div class="review-info-body">
+<b>시험명:</b><br>{st.session_state.selected_exam_name[:20]}<br><br>
+<b>시험일자:</b> {today_str}<br><br>
+<b>부:</b> 1<br><br>
+<b>수험번호:</b> 0001<br><br>
+<b>수험자명:</b> 홍길동<br><br>
+<b>남은시간:</b> {remain_td}
+</div>
+</div>
+<div class="review-omr-panel">
+<div class="review-omr-header">답안표기란</div>
+<div class="omr-review-grid" style="grid-template-columns: {grid_template};">
+"""
     
-    # 각 단(Column)별 생성
     for col_idx in range(cols_count):
-        html_review += f'<div class="omr-col">'
+        html_review += '<div class="omr-col">'
         html_review += f'<div class="omr-subject-header">제 {col_idx + 1}과목</div>'
         
         start_q = col_idx * 20
-        end_q = min(start_q + 20, total_q)
+        end_q = min(start_q + 20, len(questions))
         
         for idx in range(start_q, end_q):
             q_num = f"{idx + 1:02d}"
@@ -274,25 +277,23 @@ elif st.session_state.review_mode and not st.session_state.submitted:
             dots = ""
             for opt_num in range(1, 5):
                 if opt_num == ans_idx:
-                    # 선택된 답안은 검정색 까만 동그라미
                     dots += '<span style="color:#000; font-size:16px;">⚫</span>'
                 else:
-                    # 미선택 답안은 빨간색 원형 숫자 (버그 수정됨)
                     circle_char = "①②③④"[opt_num - 1]
                     dots += f'<span style="color:#d9534f; font-size:15px; opacity:0.6;">{circle_char}</span>'
                     
             html_review += f'<div class="{row_class}"><span class="omr-num">{q_num}</span><div class="omr-dots">{dots}</div></div>'
             
-        html_review += '</div>' # omr-col 닫기
+        html_review += '</div>'
 
     html_review += """
-            </div>
-            <div style="padding: 10px 15px; color: #d9534f; font-size: 13px; font-weight:bold;">
-                * 문항번호를 클릭하면 해당 문항으로 이동합니다. (현재 구현은 이전 화면 복귀 기능 제공)
-            </div>
-        </div>
-    </div>
-    """
+</div>
+<div style="padding: 10px 15px; color: #d9534f; font-size: 13px; font-weight:bold;">
+* 문항번호를 클릭하면 해당 문항으로 이동합니다. (현재 구현은 이전 화면 복귀 기능 제공)
+</div>
+</div>
+</div>
+"""
     st.markdown(html_review, unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
@@ -358,30 +359,30 @@ elif st.session_state.submitted:
     status_text = "합격" if is_pass else "불합격"
     status_class = "result-score-pass" if is_pass else "result-score-fail"
 
+    # 좌측 공백 제거 (들여쓰기 방지) 및 💡 3. 폰트 클래스 적용 (CSS에서 48px 적용됨)
     st.markdown(f"""
-    <div class="result-banner {banner_class}">
-        {banner_msg}
-    </div>
-    
-    <table class="result-table">
-        <tr>
-            <th>수험자 이름</th>
-            <td>김영준</td>
-        </tr>
-        <tr>
-            <th>응시종목</th>
-            <td>{st.session_state.selected_exam_name[:20]}</td>
-        </tr>
-        <tr>
-            <th>득점</th>
-            <td class="{status_class}" style="font-size: 24px;">{final_score_display} 점</td>
-        </tr>
-        <tr>
-            <th>가채점결과</th>
-            <td class="{status_class}" style="font-size: 24px;">{status_text}</td>
-        </tr>
-    </table>
-    """, unsafe_allow_html=True)
+<div class="result-banner {banner_class}">
+    {banner_msg}
+</div>
+<table class="result-table">
+    <tr>
+        <th>수험자 이름</th>
+        <td>김영준</td>
+    </tr>
+    <tr>
+        <th>응시종목</th>
+        <td>{st.session_state.selected_exam_name[:20]}</td>
+    </tr>
+    <tr>
+        <th>득점</th>
+        <td class="{status_class}">{final_score_display} 점</td>
+    </tr>
+    <tr>
+        <th>가채점결과</th>
+        <td class="{status_class}">{status_text}</td>
+    </tr>
+</table>
+""", unsafe_allow_html=True)
     
     if subject_scores:
         sub_html = "<table class='result-table'><tr><th>세부과목명</th><th>득점</th><th>비고(과락)</th></tr>"
