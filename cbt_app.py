@@ -273,10 +273,9 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
     <div class="title">01 {st.session_state.selected_exam_name}</div>
     <div class="info">
         {guest_expiry_banner}
-        수험번호 : 1000007<br>
-        수험자명 : {display_user_name}<br>
+        수험번호 : 0001
+        수험자명 : 홍길동
         남은시간 : {remain_td}
-    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -286,7 +285,7 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
         # 💡 [핵심] 실제 시험장과 완벽히 똑같은 설정 툴바 배치
         tb_col1, tb_col2 = st.columns(2)
         with tb_col1:
-            st.radio("🔍 글자크기", ["100%", "150%", "200%"], horizontal=True, key="font_exam")
+            st.radio("🔍 글자크기", ["100%", "110%", "120%"], horizontal=True, key="font_exam")
         with tb_col2:
             st.radio("📐 화면배치", ["가로(1단)", "세로(2단)"], horizontal=True, key="layout_exam")
         st.markdown("---")
@@ -411,8 +410,7 @@ elif st.session_state.review_mode and not st.session_state.submitted:
     <div class="title">01 {st.session_state.selected_exam_name}</div>
     <div class="info">
         {guest_expiry_banner}
-        수험번호: 1000007 | 수험자명: {display_user_name}
-    </div>
+        수험번호: 0001 | 수험자명: 홍길동
 </div>
 """, unsafe_allow_html=True)
 
@@ -435,10 +433,9 @@ elif st.session_state.review_mode and not st.session_state.submitted:
 <b>시험명:</b><br>{st.session_state.selected_exam_name[:20]}<br><br>
 <b>시험일자:</b> {today_str}<br><br>
 <b>부:</b> 1<br><br>
-{guest_expiry_review}<b>수험번호:</b> 1000007<br><br>
-<b>수험자명:</b> {display_user_name}<br><br>
+{guest_expiry_review}<b>수험번호:</b> 0001<br>
+<b>수험자명:</b> 홍길동<br>
 <b>남은시간:</b> {remain_td}
-</div>
 </div>
 <div class="review-omr-panel">
 <div class="review-omr-header">답안표기란</div>
