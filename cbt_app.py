@@ -163,6 +163,10 @@ if 'start_time' not in st.session_state: st.session_state.start_time = time.time
 if 'end_time' not in st.session_state: st.session_state.end_time = None
 if 'img_expanded' not in st.session_state: st.session_state.img_expanded = False
 
+# 💡 학습 모드 폰트/배열 전역 변수
+if 'study_font_size' not in st.session_state: st.session_state.study_font_size = "100%"
+if 'study_layout' not in st.session_state: st.session_state.study_layout = "가로 배열(1단)"
+
 with st.expander("⚙️ 시험 선택 및 설정 (초기화)"):
     col_set1, col_set2 = st.columns([3, 1])
     with col_set1:
@@ -212,42 +216,90 @@ remain_seconds = max((limit_minutes * 60) - elapsed_seconds, 0)
 remain_td = datetime.timedelta(seconds=remain_seconds)
 today_str = datetime.datetime.now().strftime("%Y-%m-%d")
 
-# 접속자 이름 및 게스트 전용 기한 표시 로직 💡
+# 접속자 이름 및 게스트 전용 기한 표시 로직
 display_user_name = "홍길동" if st.session_state.user_type == "Admin" else "게스트 (Guest)"
 guest_expiry_banner = f"<span style='color: #ffeb3b;'>사용기간 : ~ {GUEST_EXPIRY_DATE}</span><br>" if st.session_state.user_type == "Guest" else ""
 guest_expiry_review = f"<b>사용기간:</b> ~ <span style='color: #d9534f;'>{GUEST_EXPIRY_DATE}</span><br><br>" if st.session_state.user_type == "Guest" else ""
 
 
 # =====================================================================
-# 5. [STEP 0] 학습 모드 (Study Mode)
+# 5. [STEP 0] 학습 모드 (Study Mode) - 인쇄, 폰트, 4분할 레이아웃 기능 탑재 💡
 # =====================================================================
 if st.session_state.study_mode:
     st.markdown(f"### 📖 학습 모드 : {st.session_state.selected_exam_name}")
-    st.info("💡 이 모드에서는 전체 문항의 정답과 해설을 즉시 확인하며 빠르게 회독할 수 있습니다.")
     
-    if st.button("↩️ 실전 모드로 돌아가기 (초기화)", type="primary"):
-        st.session_state.study_mode = False
-        st.session_state.user_answers = {}
-        st.session_state.current_page = 1
-        st.session_state.start_time = time.time()
-        st.rerun()
-        
+    # 상단 컨트롤 패널
+    ctrl_col1, ctrl_col2, ctrl_col3, ctrl_col4 = st.columns([1.5, 1.5, 1, 1])
+    with ctrl_col1:
+        st.session_state.study_font_size = st.radio("🔍 글자 크기", ["100%", "150%", "200%"], index=["100%", "150%", "200%"].index(st.session_state.study_font_size), horizontal=True)
+    with ctrl_col2:
+        st.session_state.study_layout = st.radio("📐 화면 배열", ["가로 배열(1단)", "세로 배열(4단)"], index=["가로 배열(1단)", "세로 배열(4단)"].index(st.session_state.study_layout), horizontal=True)
+    with ctrl_col3:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("🖨️ 인쇄하기", use_container_width=True):
+            st.components.v1.html("<script>window.parent.print();</script>", height=0)
+    with ctrl_col4:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("↩️ 뒤로 가기", type="primary", use_container_width=True):
+            st.session_state.study_mode = False
+            st.session_state.current_page = 1
+            st.rerun()
+
     st.markdown("---")
-    
-    for item in questions:
+
+    # 폰트 사이즈 변환 로직 (100% -> 1.0em)
+    size_em = float(st.session_state.study_font_size.replace("%", "")) / 100.0
+
+    # 동적 CSS 주입 (글자 크기 적용 및 인쇄 최적화)
+    st.markdown(f"""
+    <style>
+        .study-content p, .study-content span, .study-content div {{
+            font-size: {size_em}em !important;
+            line-height: 1.6;
+        }}
+        @media print {{
+            @page {{ size: A4; margin: 10mm; }}
+            header[data-testid="stHeader"], section[data-testid="stSidebar"], .stButton, div[role="radiogroup"] {{ display: none !important; }}
+            /* 세로 4단 배열 인쇄 붕괴 방지 */
+            div[data-testid="stHorizontalBlock"] {{ display: flex !important; flex-direction: row !important; }}
+            div[data-testid="column"] {{ width: 25% !important; flex: 1 1 25% !important; min-width: 25% !important; padding: 0 10px; break-inside: avoid; }}
+        }}
+    </style>
+    """, unsafe_allow_html=True)
+
+    # 개별 문항 렌더링 함수
+    def render_study_question(item, img_width):
         st.markdown(f"**{item['num']}. {item['q']}**")
         if item.get("image"):
-            try: st.image(item["image"], width=current_img_width)
+            try: st.image(item["image"], use_column_width=True if st.session_state.study_layout == "세로 배열(4단)" else False, width=img_width)
             except Exception: pass
             
         for opt in item['options']:
             if opt == item['answer']:
-                st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;<span class='study-correct'>✅ {opt}</span>", unsafe_allow_html=True)
+                st.markdown(f"&nbsp;&nbsp;<span class='study-correct'>✅ {opt}</span>", unsafe_allow_html=True)
             else:
-                st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;<span style='color:#777;'>{opt}</span>", unsafe_allow_html=True)
+                st.markdown(f"&nbsp;&nbsp;<span style='color:#777;'>{opt}</span>", unsafe_allow_html=True)
                 
         st.success(f"💡 해설: {item['explanation']}")
-        st.markdown("<br>", unsafe_allow_html=True)
+
+    # 렌더링 시작 (study-content 클래스 래핑)
+    st.markdown("<div class='study-content'>", unsafe_allow_html=True)
+
+    if st.session_state.study_layout == "가로 배열(1단)":
+        for item in questions:
+            render_study_question(item, current_img_width)
+            st.markdown("---")
+            
+    elif st.session_state.study_layout == "세로 배열(4단)":
+        for i in range(0, len(questions), 4):
+            cols = st.columns(4)
+            for j in range(4):
+                if i + j < len(questions):
+                    with cols[j]:
+                        render_study_question(questions[i+j], int(current_img_width/2))
+            st.markdown("---")
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # =====================================================================
@@ -259,9 +311,10 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
     <div class="title">01 {st.session_state.selected_exam_name}</div>
     <div class="info">
         {guest_expiry_banner}
-        수험번호 : 0001
-        수험자명 : 홍길동
+        수험번호 : 1000007<br>
+        수험자명 : {display_user_name}<br>
         남은시간 : {remain_td}
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -335,7 +388,7 @@ elif st.session_state.review_mode and not st.session_state.submitted:
     <div class="title">01 {st.session_state.selected_exam_name}</div>
     <div class="info">
         {guest_expiry_banner}
-        수험번호: 0001 | 수험자명: 홍길동
+        수험번호: 1000007 | 수험자명: {display_user_name}
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -359,8 +412,8 @@ elif st.session_state.review_mode and not st.session_state.submitted:
 <b>시험명:</b><br>{st.session_state.selected_exam_name[:20]}<br><br>
 <b>시험일자:</b> {today_str}<br><br>
 <b>부:</b> 1<br><br>
-{guest_expiry_review}<b>수험번호:</b> 0001<br><br>
-<b>수험자명:</b> 홍길동<br><br>
+{guest_expiry_review}<b>수험번호:</b> 1000007<br><br>
+<b>수험자명:</b> {display_user_name}<br><br>
 <b>남은시간:</b> {remain_td}
 </div>
 </div>
@@ -477,7 +530,7 @@ elif st.session_state.submitted:
 <table class="result-table">
     <tr>
         <th>수험자 이름</th>
-        <td>홍길동</td>
+        <td>{display_user_name}</td>
     </tr>
     <tr>
         <th>응시종목</th>
