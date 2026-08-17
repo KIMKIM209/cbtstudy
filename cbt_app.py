@@ -24,6 +24,15 @@ st.set_page_config(page_title="국가기술자격 실전 CBT", page_icon="⚡", 
 
 st.markdown("""
 <style>
+    /* =====================================================================
+       💡 폰트 및 시각 환경 실전 완벽 동기화 (CBT 표준 질감)
+       ===================================================================== */
+    * {
+        font-family: 'Malgun Gothic', '맑은 고딕', 'Gulim', '굴림', 'Apple SD Gothic Neo', sans-serif !important;
+        letter-spacing: -0.5px !important;
+        word-break: keep-all !important;
+    }
+
     /* 기본 UI 숨김 */
     header[data-testid="stHeader"] {display: none;}
     section[data-testid="stSidebar"] {display: none;}
@@ -33,7 +42,7 @@ st.markdown("""
         background-color: #00a2e8; color: white;
         padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
     }
-    .cbt-banner .title { font-size: 24px; font-weight: 900; margin: 0; letter-spacing: -1px;}
+    .cbt-banner .title { font-size: 24px; font-weight: 900; margin: 0; letter-spacing: -1px !important;}
     .cbt-banner .info { font-size: 15px; font-weight: 600; text-align: right; line-height: 1.4;}
     
     /* 우측 OMR 패널 (풀이 화면용) */
@@ -213,7 +222,7 @@ remain_td = datetime.timedelta(seconds=remain_seconds)
 today_str = datetime.datetime.now().strftime("%Y-%m-%d")
 
 # 접속자 이름 및 게스트 전용 기한 표시 로직
-display_user_name = "김영준" if st.session_state.user_type == "Admin" else "게스트 (Guest)"
+display_user_name = "홍길동" if st.session_state.user_type == "Admin" else "게스트 (Guest)"
 guest_expiry_banner = f"<span style='color: #ffeb3b;'>사용기간 : ~ {GUEST_EXPIRY_DATE}</span><br>" if st.session_state.user_type == "Guest" else ""
 guest_expiry_review = f"<b>사용기간:</b> ~ <span style='color: #d9534f;'>{GUEST_EXPIRY_DATE}</span><br><br>" if st.session_state.user_type == "Guest" else ""
 
@@ -265,7 +274,7 @@ if st.session_state.study_mode:
 
 
 # =====================================================================
-# 6. [STEP 1] 문제 풀이 화면 (실전 모드 - CBT 툴바 및 동적 폰트 적용) 💡
+# 6. [STEP 1] 문제 풀이 화면 (실전 모드 - CBT 툴바 및 동적 폰트 적용) 
 # =====================================================================
 elif not st.session_state.review_mode and not st.session_state.submitted:
     st.markdown(f"""
@@ -282,7 +291,7 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
     col_main, col_omr = st.columns([7.5, 2.5], gap="large")
     
     with col_main:
-        # 💡 [핵심] 실제 시험장과 완벽히 똑같은 설정 툴바 배치
+        # 실제 시험장과 완벽히 똑같은 설정 툴바 배치
         tb_col1, tb_col2 = st.columns(2)
         with tb_col1:
             st.radio("🔍 글자크기", ["90%", "100%", "110%"], horizontal=True, key="font_exam")
@@ -290,7 +299,7 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
             st.radio("📐 화면배치", ["가로(1단)", "세로(2단)"], horizontal=True, key="layout_exam")
         st.markdown("---")
 
-        # 💡 [핵심] 레이아웃에 따른 동적 문항수(4문제 vs 5문제) 및 페이지네이션 통제
+        # 레이아웃에 따른 동적 문항수(4문제 vs 5문제) 및 페이지네이션 통제
         QUESTIONS_PER_PAGE = 4 if st.session_state.layout_exam == "세로(2단)" else 5
         total_pages = math.ceil(len(questions) / QUESTIONS_PER_PAGE)
         
@@ -302,7 +311,7 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
         end_idx = min(start_idx + QUESTIONS_PER_PAGE, len(questions))
         page_questions = questions[start_idx:end_idx]
         
-        # 💡 [핵심] 강제 폰트 크기 변환 및 충돌 방지 CSS 주입 (오직 문제와 보기만 확대)
+        # 강제 폰트 크기 변환 및 충돌 방지 CSS 주입 (오직 문제와 보기만 확대)
         size_em = float(st.session_state.font_exam.replace("%", "")) / 100.0
         dynamic_img_width = int(current_img_width * size_em) 
         
@@ -326,7 +335,7 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
         </style>
         """, unsafe_allow_html=True)
 
-        # 💡 화면 배열 분기 렌더링 시작
+        # 화면 배열 분기 렌더링 시작
         if st.session_state.layout_exam == "세로(2단)":
             # 세로 배열: 2줄(단) 분할, 총 4문제 (왼쪽 2개, 오른쪽 2개)
             q_cols = st.columns(2, gap="large")
