@@ -259,8 +259,8 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
     <div class="title">01 {st.session_state.selected_exam_name}</div>
     <div class="info">
         {guest_expiry_banner}
-        수험번호 : 0001<br>
-        수험자명 : 홍길동<br>
+        수험번호 : 0001
+        수험자명 : 홍길동
         남은시간 : {remain_td}
     </div>
 </div>
