@@ -179,6 +179,9 @@ if 'current_page' not in st.session_state: st.session_state.current_page = 1
 if 'start_time' not in st.session_state: st.session_state.start_time = time.time()
 if 'end_time' not in st.session_state: st.session_state.end_time = None
 if 'img_expanded' not in st.session_state: st.session_state.img_expanded = False
+if 'wrong_history' not in st.session_state: st.session_state.wrong_history = set() # 🚨 오답 이력 저장용 (Set 구조 활용)
+
+# 💡 실전(시험) 모드용 레이아웃 및 폰트 설정 상태 변수 초기화
 
 # 💡 실전(시험) 모드용 레이아웃 및 폰트 설정 상태 변수 초기화
 if 'font_exam' not in st.session_state: st.session_state.font_exam = "100%"
@@ -354,6 +357,11 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
                 
                 with target_col:
                     st.markdown(f"**{item['num']}. {item['q']}**")
+                 
+                # (세로 배열과 가로 배열의 문제 출력부를 아래와 같이 수정)
+                wrong_badge = " <span style='color:#e74c3c; font-size:0.85em; font-weight:bold;'>[🚨 이전 오답]</span>" if item['q'] in st.session_state.wrong_history else ""
+                st.markdown(f"**{item['num']}. {item['q']}**{wrong_badge}", unsafe_allow_html=True)
+                
                     if item.get("image"):
                         try: st.image(item["image"], width=int(dynamic_img_width * 0.9))
                         except Exception: pass
@@ -520,14 +528,19 @@ elif st.session_state.submitted:
     wrong_questions = []
     correct_questions = []
 
-    for idx, item in enumerate(questions):
+ for idx, item in enumerate(questions):
         my_answer = st.session_state.user_answers.get(idx)
         if my_answer == item['answer']:
             correct_count += 1
             correct_questions.append({"item": item, "my_answer": my_answer})
+            # 다시 풀어서 정답을 맞췄다면 오답 족쇄를 풀어줍니다.
+            if item['q'] in st.session_state.wrong_history:
+                st.session_state.wrong_history.remove(item['q'])
         else:
             wrong_questions.append({"item": item, "my_answer": my_answer})
-
+            # 틀린 문제는 오답 세션에 확실히 각인시킵니다.
+            st.session_state.wrong_history.add(item['q'])
+            
     total_score = int((correct_count / len(questions)) * 100)
     
     is_pass = False
