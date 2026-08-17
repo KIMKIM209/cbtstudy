@@ -11,12 +11,12 @@ import datetime
 # =====================================================================
 # 👑 관리자 계정 (본인 전용, 무제한 접속)
 ADMIN_ID = "admin"
-ADMIN_PW = "Q1w2e3r4!"
+ADMIN_PW = "1234"
 
 # 🤝 게스트 계정 (지인 공유용, 기간 한정 접속)
 GUEST_ID = "free"
 GUEST_PW = "1004"
-GUEST_EXPIRY_DATE = "2026-08-23" # YYYY-MM-DD 형식으로 만료일 지정 (이 날짜까지만 접속 가능)
+GUEST_EXPIRY_DATE = "2026-08-23" # YYYY-MM-DD 형식으로 만료일 지정
 
 
 # --- 1. 기본 설정 및 실전 CBT 전용 CSS ---
@@ -40,7 +40,7 @@ st.markdown("""
     .omr-header { background-color: #4a7ebb; color: white; text-align: center; padding: 10px; font-size: 16px; font-weight: bold; margin-bottom: 0px;}
     .bottom-bar { margin-top: 20px; padding-top: 15px; border-top: 2px solid #ddd;}
     
-    /* 리뷰 화면 (제출 전 확인) CSS - 큐넷 완벽 동기화 */
+    /* 리뷰 화면 (제출 전 확인) CSS */
     .review-container { display: flex; gap: 15px; margin-top: 10px; }
     .review-info-panel { flex: 1.5; border: 2px solid #ddd; background: #fff; height: fit-content; }
     .review-info-header { background: #008CBA; color: white; text-align: center; padding: 12px; font-weight: bold; font-size: 18px; }
@@ -70,7 +70,7 @@ st.markdown("""
     .result-table th { background-color: #f2f2f2; border: 1px solid #ddd; padding: 12px; font-weight: bold; }
     .result-table td { border: 1px solid #ddd; padding: 12px; }
     
-    /* 합격/불합격 폰트 2배 확장 (48px) */
+    /* 합격/불합격 폰트 2배 확장 */
     .result-score-pass { color: #0078d7; font-weight: 900; font-size: 48px; }
     .result-score-fail { color: #d9534f; font-weight: 900; font-size: 48px; }
     
@@ -84,7 +84,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =====================================================================
-# 0. 접근 통제 (Gatekeeper) 로직 - 기간 한정 기능 추가
+# 0. 접근 통제 (Gatekeeper) 로직
 # =====================================================================
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
@@ -106,13 +106,10 @@ if not st.session_state.authenticated:
             if submit_btn:
                 today_date = datetime.datetime.now().strftime("%Y-%m-%d")
                 
-                # 1. 관리자 권한 확인 (무제한 패스)
                 if input_id == ADMIN_ID and input_pw == ADMIN_PW:
                     st.session_state.authenticated = True
                     st.session_state.user_type = "Admin"
                     st.rerun()
-                    
-                # 2. 게스트 권한 확인 (기한 체크)
                 elif input_id == GUEST_ID and input_pw == GUEST_PW:
                     if today_date <= GUEST_EXPIRY_DATE:
                         st.session_state.authenticated = True
@@ -120,8 +117,6 @@ if not st.session_state.authenticated:
                         st.rerun()
                     else:
                         st.error(f"🚨 해당 계정의 접속 승인 기한({GUEST_EXPIRY_DATE})이 만료되었습니다. 관리자에게 문의하세요.")
-                        
-                # 3. 인증 실패
                 else:
                     st.error("🚨 인증 정보가 일치하지 않습니다. 정확히 입력해 주세요.")
     st.stop()
@@ -217,8 +212,10 @@ remain_seconds = max((limit_minutes * 60) - elapsed_seconds, 0)
 remain_td = datetime.timedelta(seconds=remain_seconds)
 today_str = datetime.datetime.now().strftime("%Y-%m-%d")
 
-# 접속자 이름 분기 처리
-display_user_name = "관리자 (Admin)" if st.session_state.user_type == "Admin" else "게스트 (Guest)"
+# 접속자 이름 및 게스트 전용 기한 표시 로직 💡
+display_user_name = "김영준" if st.session_state.user_type == "Admin" else "게스트 (Guest)"
+guest_expiry_banner = f"<span style='color: #ffeb3b;'>사용기간 : ~ {GUEST_EXPIRY_DATE}</span><br>" if st.session_state.user_type == "Guest" else ""
+guest_expiry_review = f"<b>사용기간:</b> ~ <span style='color: #d9534f;'>{GUEST_EXPIRY_DATE}</span><br><br>" if st.session_state.user_type == "Guest" else ""
 
 
 # =====================================================================
@@ -261,6 +258,7 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
 <div class="cbt-banner">
     <div class="title">01 {st.session_state.selected_exam_name}</div>
     <div class="info">
+        {guest_expiry_banner}
         수험번호 : 1000007<br>
         수험자명 : {display_user_name}<br>
         남은시간 : {remain_td}
@@ -336,7 +334,10 @@ elif st.session_state.review_mode and not st.session_state.submitted:
     st.markdown(f"""
 <div class="cbt-banner">
     <div class="title">01 {st.session_state.selected_exam_name}</div>
-    <div class="info">수험번호: 1000007 | 수험자명: {display_user_name}</div>
+    <div class="info">
+        {guest_expiry_banner}
+        수험번호: 1000007 | 수험자명: {display_user_name}
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -359,7 +360,7 @@ elif st.session_state.review_mode and not st.session_state.submitted:
 <b>시험명:</b><br>{st.session_state.selected_exam_name[:20]}<br><br>
 <b>시험일자:</b> {today_str}<br><br>
 <b>부:</b> 1<br><br>
-<b>수험번호:</b> 1000007<br><br>
+{guest_expiry_review}<b>수험번호:</b> 1000007<br><br>
 <b>수험자명:</b> {display_user_name}<br><br>
 <b>남은시간:</b> {remain_td}
 </div>
