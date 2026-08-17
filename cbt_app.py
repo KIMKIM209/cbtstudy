@@ -300,7 +300,7 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
         tb_col1, tb_col2 = st.columns(2)
         with tb_col1:
             # 💡 [버그 수정 구역] 라디오 버튼 렌더링 시 st.session_state 직접 할당 중복 방지
-            st.radio("🔍 글자크기", ["100%", "150%", "200%"], horizontal=True, key="font_exam")
+            st.radio("🔍 글자크기", ["90%", "100%", "110%"], horizontal=True, key="font_exam")
         with tb_col2:
             st.radio("📐 화면배치", ["가로(1단)", "세로(2단)"], horizontal=True, key="layout_exam")
         st.markdown("---")
