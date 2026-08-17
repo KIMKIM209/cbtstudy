@@ -6,6 +6,19 @@ import re
 import time
 import datetime
 
+# =====================================================================
+# 0. 보안 설정 (아이디/비밀번호 및 기간 설정)
+# =====================================================================
+# 👑 관리자 계정 (본인 전용, 무제한 접속)
+ADMIN_ID = "admin"
+ADMIN_PW = "Q1w2e3r4!"
+
+# 🤝 게스트 계정 (지인 공유용, 기간 한정 접속)
+GUEST_ID = "free"
+GUEST_PW = "1004"
+GUEST_EXPIRY_DATE = "2026-08-23" # YYYY-MM-DD 형식으로 만료일 지정 (이 날짜까지만 접속 가능)
+
+
 # --- 1. 기본 설정 및 실전 CBT 전용 CSS ---
 st.set_page_config(page_title="국가기술자격 실전 CBT", page_icon="⚡", layout="wide", initial_sidebar_state="collapsed")
 
@@ -63,8 +76,56 @@ st.markdown("""
     
     /* 보기 라디오 버튼 간격 */
     .stRadio > div { gap: 10px; }
+    
+    /* 학습 모드 전용 */
+    .study-box { border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-bottom: 20px; background: #fff;}
+    .study-correct { color: #0078d7; font-weight: bold; background-color: #e6f2ff; padding: 4px 8px; border-radius: 4px;}
 </style>
 """, unsafe_allow_html=True)
+
+# =====================================================================
+# 0. 접근 통제 (Gatekeeper) 로직 - 기간 한정 기능 추가
+# =====================================================================
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+if 'user_type' not in st.session_state:
+    st.session_state.user_type = None
+
+if not st.session_state.authenticated:
+    col1, col2, col3 = st.columns([1, 1.5, 1])
+    with col2:
+        st.markdown("<br><br><br><br>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; color: #0056b3;'>🔒 시스템 접근 인증</h2>", unsafe_allow_html=True)
+        st.info("지적 자산 보호 및 권한 없는 접근을 통제하기 위해 계정 인증이 필요합니다.")
+        
+        with st.form("login_form"):
+            input_id = st.text_input("아이디 (ID)")
+            input_pw = st.text_input("비밀번호 (Password)", type="password")
+            submit_btn = st.form_submit_button("접속하기 (Login)", use_container_width=True)
+            
+            if submit_btn:
+                today_date = datetime.datetime.now().strftime("%Y-%m-%d")
+                
+                # 1. 관리자 권한 확인 (무제한 패스)
+                if input_id == ADMIN_ID and input_pw == ADMIN_PW:
+                    st.session_state.authenticated = True
+                    st.session_state.user_type = "Admin"
+                    st.rerun()
+                    
+                # 2. 게스트 권한 확인 (기한 체크)
+                elif input_id == GUEST_ID and input_pw == GUEST_PW:
+                    if today_date <= GUEST_EXPIRY_DATE:
+                        st.session_state.authenticated = True
+                        st.session_state.user_type = "Guest"
+                        st.rerun()
+                    else:
+                        st.error(f"🚨 해당 계정의 접속 승인 기한({GUEST_EXPIRY_DATE})이 만료되었습니다. 관리자에게 문의하세요.")
+                        
+                # 3. 인증 실패
+                else:
+                    st.error("🚨 인증 정보가 일치하지 않습니다. 정확히 입력해 주세요.")
+    st.stop()
+
 
 # --- 2. 기출문제 매핑 ---
 exam_mapping = {
@@ -101,6 +162,7 @@ if 'current_exam' not in st.session_state: st.session_state.current_exam = exam_
 if 'user_answers' not in st.session_state: st.session_state.user_answers = {}
 if 'review_mode' not in st.session_state: st.session_state.review_mode = False 
 if 'submitted' not in st.session_state: st.session_state.submitted = False 
+if 'study_mode' not in st.session_state: st.session_state.study_mode = False 
 if 'current_page' not in st.session_state: st.session_state.current_page = 1
 if 'start_time' not in st.session_state: st.session_state.start_time = time.time()
 if 'end_time' not in st.session_state: st.session_state.end_time = None
@@ -113,13 +175,22 @@ with st.expander("⚙️ 시험 선택 및 설정 (초기화)"):
     with col_set2:
         st.markdown("<br>", unsafe_allow_html=True)
         st.toggle("🔍 그림 크게 보기", key="img_expanded")
-        
+    
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button("📖 정답/해설 보며 공부하기 (학습 모드)", use_container_width=True):
+            st.session_state.study_mode = True
+            st.session_state.review_mode = False
+            st.session_state.submitted = False
+            st.rerun()
+            
     if exam_choice != st.session_state.selected_exam_name:
         st.session_state.selected_exam_name = exam_choice
         st.session_state.current_exam = exam_mapping[exam_choice]
         st.session_state.user_answers = {}
         st.session_state.review_mode = False
         st.session_state.submitted = False
+        st.session_state.study_mode = False
         st.session_state.current_page = 1
         st.session_state.start_time = time.time()
         st.session_state.end_time = None
@@ -146,18 +217,52 @@ remain_seconds = max((limit_minutes * 60) - elapsed_seconds, 0)
 remain_td = datetime.timedelta(seconds=remain_seconds)
 today_str = datetime.datetime.now().strftime("%Y-%m-%d")
 
+# 접속자 이름 분기 처리
+display_user_name = "관리자 (Admin)" if st.session_state.user_type == "Admin" else "게스트 (Guest)"
+
 
 # =====================================================================
-# 5. [STEP 1] 문제 풀이 화면
+# 5. [STEP 0] 학습 모드 (Study Mode)
 # =====================================================================
-if not st.session_state.review_mode and not st.session_state.submitted:
-    # 좌측 공백 제거 (들여쓰기 방지)
+if st.session_state.study_mode:
+    st.markdown(f"### 📖 학습 모드 : {st.session_state.selected_exam_name}")
+    st.info("💡 이 모드에서는 전체 문항의 정답과 해설을 즉시 확인하며 빠르게 회독할 수 있습니다.")
+    
+    if st.button("↩️ 실전 모드로 돌아가기 (초기화)", type="primary"):
+        st.session_state.study_mode = False
+        st.session_state.user_answers = {}
+        st.session_state.current_page = 1
+        st.session_state.start_time = time.time()
+        st.rerun()
+        
+    st.markdown("---")
+    
+    for item in questions:
+        st.markdown(f"**{item['num']}. {item['q']}**")
+        if item.get("image"):
+            try: st.image(item["image"], width=current_img_width)
+            except Exception: pass
+            
+        for opt in item['options']:
+            if opt == item['answer']:
+                st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;<span class='study-correct'>✅ {opt}</span>", unsafe_allow_html=True)
+            else:
+                st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;<span style='color:#777;'>{opt}</span>", unsafe_allow_html=True)
+                
+        st.success(f"💡 해설: {item['explanation']}")
+        st.markdown("<br>", unsafe_allow_html=True)
+
+
+# =====================================================================
+# 6. [STEP 1] 문제 풀이 화면
+# =====================================================================
+elif not st.session_state.review_mode and not st.session_state.submitted:
     st.markdown(f"""
 <div class="cbt-banner">
     <div class="title">01 {st.session_state.selected_exam_name}</div>
     <div class="info">
-        수험번호 : 0001<br>
-        수험자명 : 홍길동<br>
+        수험번호 : 1000007<br>
+        수험자명 : {display_user_name}<br>
         남은시간 : {remain_td}
     </div>
 </div>
@@ -185,20 +290,28 @@ if not st.session_state.review_mode and not st.session_state.submitted:
             st.markdown("---")
             
         st.markdown("<div class='bottom-bar'></div>", unsafe_allow_html=True)
-        btn_col1, btn_col2, btn_col3, btn_col4 = st.columns([1.5, 2.5, 1.5, 2])
         
-        with btn_col1: st.button("🧮 계산기", disabled=True, use_container_width=True)
-        with btn_col2: st.markdown(f"<div style='text-align: center; padding-top: 5px;'><b>{st.session_state.current_page} / {total_pages} 페이지</b></div>", unsafe_allow_html=True)
-        with btn_col3:
+        btn_calc, btn_prev, btn_page, btn_next, btn_submit = st.columns([1.5, 1.5, 2.5, 1.5, 2])
+        
+        with btn_calc: 
+            st.button("🧮 계산기", disabled=True, use_container_width=True)
+            
+        with btn_prev:
+            if st.session_state.current_page > 1:
+                if st.button("◀ 이전", use_container_width=True):
+                    st.session_state.current_page -= 1
+                    st.rerun()
+                    
+        with btn_page: 
+            st.markdown(f"<div style='text-align: center; padding-top: 5px; font-size:15px;'><b>{st.session_state.current_page} / {total_pages} 페이지</b></div>", unsafe_allow_html=True)
+            
+        with btn_next:
             if st.session_state.current_page < total_pages:
                 if st.button("다음 ▶", use_container_width=True):
                     st.session_state.current_page += 1
                     st.rerun()
-            elif st.session_state.current_page > 1:
-                if st.button("◀ 이전", use_container_width=True):
-                    st.session_state.current_page -= 1
-                    st.rerun()
-        with btn_col4:
+                    
+        with btn_submit:
             if st.button("✅ 답안 제출", type="primary", use_container_width=True):
                 st.session_state.review_mode = True
                 st.rerun()
@@ -217,17 +330,16 @@ if not st.session_state.review_mode and not st.session_state.submitted:
 
 
 # =====================================================================
-# 6. [STEP 2] 제출 전 OMR 검토 화면 (코드 렌더링 버그 및 카운트 수정)
+# 7. [STEP 2] 제출 전 OMR 검토 화면 
 # =====================================================================
 elif st.session_state.review_mode and not st.session_state.submitted:
     st.markdown(f"""
 <div class="cbt-banner">
     <div class="title">01 {st.session_state.selected_exam_name}</div>
-    <div class="info">수험번호: 0001 | 수험자명: 홍길동</div>
+    <div class="info">수험번호: 1000007 | 수험자명: {display_user_name}</div>
 </div>
 """, unsafe_allow_html=True)
 
-    # 💡 1. 미풀음 카운트 정확한 계산 로직 (None 값 제외)
     answered_count = sum(1 for val in st.session_state.user_answers.values() if val is not None)
     unanswered_count = len(questions) - answered_count
 
@@ -239,7 +351,6 @@ elif st.session_state.review_mode and not st.session_state.submitted:
     cols_count = math.ceil(len(questions) / 20)
     grid_template = f"repeat({cols_count}, 1fr)"
     
-    # 💡 2. 들여쓰기를 완벽히 제거하여 마크다운이 HTML을 코드블록으로 인식하지 않게 통제
     html_review = f"""
 <div class="review-container">
 <div class="review-info-panel">
@@ -248,8 +359,8 @@ elif st.session_state.review_mode and not st.session_state.submitted:
 <b>시험명:</b><br>{st.session_state.selected_exam_name[:20]}<br><br>
 <b>시험일자:</b> {today_str}<br><br>
 <b>부:</b> 1<br><br>
-<b>수험번호:</b> 0001<br><br>
-<b>수험자명:</b> 홍길동<br><br>
+<b>수험번호:</b> 1000007<br><br>
+<b>수험자명:</b> {display_user_name}<br><br>
 <b>남은시간:</b> {remain_td}
 </div>
 </div>
@@ -311,7 +422,7 @@ elif st.session_state.review_mode and not st.session_state.submitted:
 
 
 # =====================================================================
-# 7. [STEP 3] 최종 결과 화면 (submitted mode)
+# 8. [STEP 3] 최종 결과 화면
 # =====================================================================
 elif st.session_state.submitted:
     correct_count = 0
@@ -359,7 +470,6 @@ elif st.session_state.submitted:
     status_text = "합격" if is_pass else "불합격"
     status_class = "result-score-pass" if is_pass else "result-score-fail"
 
-    # 좌측 공백 제거 (들여쓰기 방지) 및 💡 3. 폰트 클래스 적용 (CSS에서 48px 적용됨)
     st.markdown(f"""
 <div class="result-banner {banner_class}">
     {banner_msg}
@@ -367,7 +477,7 @@ elif st.session_state.submitted:
 <table class="result-table">
     <tr>
         <th>수험자 이름</th>
-        <td>김영준</td>
+        <td>{display_user_name}</td>
     </tr>
     <tr>
         <th>응시종목</th>
@@ -398,6 +508,7 @@ elif st.session_state.submitted:
             st.session_state.user_answers = {}
             st.session_state.review_mode = False
             st.session_state.submitted = False
+            st.session_state.study_mode = False
             st.session_state.current_page = 1
             st.session_state.start_time = time.time()
             st.session_state.end_time = None
