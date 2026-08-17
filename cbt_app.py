@@ -285,7 +285,7 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
         # 💡 [핵심] 실제 시험장과 완벽히 똑같은 설정 툴바 배치
         tb_col1, tb_col2 = st.columns(2)
         with tb_col1:
-            st.radio("🔍 글자크기", ["100%", "110%", "120%"], horizontal=True, key="font_exam")
+            st.radio("🔍 글자크기", ["90%", "100%", "110%"], horizontal=True, key="font_exam")
         with tb_col2:
             st.radio("📐 화면배치", ["가로(1단)", "세로(2단)"], horizontal=True, key="layout_exam")
         st.markdown("---")
