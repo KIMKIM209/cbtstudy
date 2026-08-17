@@ -18,7 +18,6 @@ GUEST_ID = "free"
 GUEST_PW = "1004"
 GUEST_EXPIRY_DATE = "2026-08-16" # YYYY-MM-DD 형식으로 만료일 지정
 
-
 # --- 1. 기본 설정 및 실전 CBT 전용 CSS ---
 st.set_page_config(page_title="국가기술자격 실전 CBT", page_icon="⚡", layout="wide", initial_sidebar_state="collapsed")
 
@@ -27,7 +26,6 @@ st.markdown("""
     /* =====================================================================
        💡 폰트 및 시각 환경 실전 완벽 동기화 (CBT 표준 질감)
        ===================================================================== */
-    /* 아이콘(화살표 등) 깨짐 현상을 원천 차단하기 위해 텍스트 영역만 정밀 타격합니다. */
     .stMarkdown p, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown li,
     div[role="radiogroup"] label p, div[role="radiogroup"] label div,
     .stButton button p,
@@ -180,8 +178,6 @@ if 'start_time' not in st.session_state: st.session_state.start_time = time.time
 if 'end_time' not in st.session_state: st.session_state.end_time = None
 if 'img_expanded' not in st.session_state: st.session_state.img_expanded = False
 if 'wrong_history' not in st.session_state: st.session_state.wrong_history = set() # 🚨 오답 이력 저장용 (Set 구조 활용)
-
-# 💡 실전(시험) 모드용 레이아웃 및 폰트 설정 상태 변수 초기화
 
 # 💡 실전(시험) 모드용 레이아웃 및 폰트 설정 상태 변수 초기화
 if 'font_exam' not in st.session_state: st.session_state.font_exam = "100%"
@@ -355,7 +351,7 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
                 actual_idx = start_idx + i 
                 target_col = q_cols[0] if i < 2 else q_cols[1] # 0, 1번은 왼쪽 / 2, 3번은 오른쪽으로 분배
                 
-               with target_col:
+                with target_col:
                     wrong_badge = " <span style='color:#e74c3c; font-size:0.85em; font-weight:bold;'>[🚨 이전 오답]</span>" if item['q'] in st.session_state.wrong_history else ""
                     st.markdown(f"**{item['num']}. {item['q']}**{wrong_badge}", unsafe_allow_html=True)
                     
@@ -372,7 +368,9 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
             # 가로 배열: 기본 1단 (5문제)
             for i, item in enumerate(page_questions):
                 actual_idx = start_idx + i 
-                st.markdown(f"**{item['num']}. {item['q']}**")
+                wrong_badge = " <span style='color:#e74c3c; font-size:0.85em; font-weight:bold;'>[🚨 이전 오답]</span>" if item['q'] in st.session_state.wrong_history else ""
+                st.markdown(f"**{item['num']}. {item['q']}**{wrong_badge}", unsafe_allow_html=True)
+                
                 if item.get("image"):
                     try: st.image(item["image"], width=dynamic_img_width)
                     except Exception: pass
