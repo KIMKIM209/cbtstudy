@@ -264,7 +264,7 @@ if st.session_state.study_mode:
             
         for opt in item['options']:
             if opt == item['answer']:
-                st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;<span class='study-correct'>✅ {opt}</span>", unsafe_allow_html=True)
+                st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;<span class='study-correct'>{opt}</span>", unsafe_allow_html=True)
             else:
                 st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;<span style='color:#777;'>{opt}</span>", unsafe_allow_html=True)
                 
