@@ -78,7 +78,6 @@ st.markdown("""
     .stRadio > div { gap: 10px; }
     
     /* 학습 모드 전용 */
-    .study-box { border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-bottom: 20px; background: #fff;}
     .study-correct { color: #0078d7; font-weight: bold; background-color: #e6f2ff; padding: 4px 8px; border-radius: 4px;}
 </style>
 """, unsafe_allow_html=True)
@@ -163,9 +162,9 @@ if 'start_time' not in st.session_state: st.session_state.start_time = time.time
 if 'end_time' not in st.session_state: st.session_state.end_time = None
 if 'img_expanded' not in st.session_state: st.session_state.img_expanded = False
 
-# 💡 학습 모드 폰트/배열 전역 변수
-if 'study_font_size' not in st.session_state: st.session_state.study_font_size = "100%"
-if 'study_layout' not in st.session_state: st.session_state.study_layout = "가로 배열(1단)"
+# 💡 실전(시험) 모드용 레이아웃 및 폰트 설정
+if 'exam_font_size' not in st.session_state: st.session_state.exam_font_size = "100%"
+if 'exam_layout' not in st.session_state: st.session_state.exam_layout = "가로(1단)"
 
 with st.expander("⚙️ 시험 선택 및 설정 (초기화)"):
     col_set1, col_set2 = st.columns([3, 1])
@@ -204,106 +203,70 @@ except ImportError:
     st.error(f"⚠️ '{selected_module_name}.py' 파일이 존재하지 않습니다.")
     st.stop()
 
-QUESTIONS_PER_PAGE = 5
-total_pages = math.ceil(len(questions) / QUESTIONS_PER_PAGE)
-limit_minutes = int(len(questions) * 1.5) if len(questions) >= 80 else len(questions)
 current_img_width = 450 if st.session_state.img_expanded else 250
 
 elapsed_seconds = int(time.time() - st.session_state.start_time)
 if st.session_state.end_time:
     elapsed_seconds = int(st.session_state.end_time - st.session_state.start_time)
-remain_seconds = max((limit_minutes * 60) - elapsed_seconds, 0)
+remain_seconds = max((int(len(questions) * 1.5) if len(questions) >= 80 else len(questions)) * 60 - elapsed_seconds, 0)
 remain_td = datetime.timedelta(seconds=remain_seconds)
 today_str = datetime.datetime.now().strftime("%Y-%m-%d")
 
 # 접속자 이름 및 게스트 전용 기한 표시 로직
-display_user_name = "홍길동" if st.session_state.user_type == "Admin" else "게스트 (Guest)"
+display_user_name = "김영준" if st.session_state.user_type == "Admin" else "게스트 (Guest)"
 guest_expiry_banner = f"<span style='color: #ffeb3b;'>사용기간 : ~ {GUEST_EXPIRY_DATE}</span><br>" if st.session_state.user_type == "Guest" else ""
 guest_expiry_review = f"<b>사용기간:</b> ~ <span style='color: #d9534f;'>{GUEST_EXPIRY_DATE}</span><br><br>" if st.session_state.user_type == "Guest" else ""
 
 
 # =====================================================================
-# 5. [STEP 0] 학습 모드 (Study Mode) - 인쇄, 폰트, 4분할 레이아웃 기능 탑재 💡
+# 5. [STEP 0] 학습 모드 (Study Mode - 순수 리스트 뷰 및 인쇄)
 # =====================================================================
 if st.session_state.study_mode:
     st.markdown(f"### 📖 학습 모드 : {st.session_state.selected_exam_name}")
+    st.info("💡 이 모드에서는 전체 문항의 정답과 해설을 즉시 확인하며 빠르게 회독할 수 있습니다.")
     
-    # 상단 컨트롤 패널
-    ctrl_col1, ctrl_col2, ctrl_col3, ctrl_col4 = st.columns([1.5, 1.5, 1, 1])
-    with ctrl_col1:
-        st.session_state.study_font_size = st.radio("🔍 글자 크기", ["100%", "150%", "200%"], index=["100%", "150%", "200%"].index(st.session_state.study_font_size), horizontal=True)
-    with ctrl_col2:
-        st.session_state.study_layout = st.radio("📐 화면 배열", ["가로 배열(1단)", "세로 배열(4단)"], index=["가로 배열(1단)", "세로 배열(4단)"].index(st.session_state.study_layout), horizontal=True)
-    with ctrl_col3:
-        st.markdown("<br>", unsafe_allow_html=True)
+    col_s1, col_s2 = st.columns(2)
+    with col_s1:
         if st.button("🖨️ 인쇄하기", use_container_width=True):
             st.components.v1.html("<script>window.parent.print();</script>", height=0)
-    with ctrl_col4:
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("↩️ 뒤로 가기", type="primary", use_container_width=True):
+    with col_s2:
+        if st.button("↩️ 실전 모드로 돌아가기 (초기화)", type="primary", use_container_width=True):
             st.session_state.study_mode = False
+            st.session_state.user_answers = {}
             st.session_state.current_page = 1
+            st.session_state.start_time = time.time()
             st.rerun()
-
+            
     st.markdown("---")
-
-    # 폰트 사이즈 변환 로직 (100% -> 1.0em)
-    size_em = float(st.session_state.study_font_size.replace("%", "")) / 100.0
-
-    # 동적 CSS 주입 (글자 크기 적용 및 인쇄 최적화)
-    st.markdown(f"""
-    <style>
-        .study-content p, .study-content span, .study-content div {{
-            font-size: {size_em}em !important;
-            line-height: 1.6;
-        }}
-        @media print {{
-            @page {{ size: A4; margin: 10mm; }}
-            header[data-testid="stHeader"], section[data-testid="stSidebar"], .stButton, div[role="radiogroup"] {{ display: none !important; }}
-            /* 세로 4단 배열 인쇄 붕괴 방지 */
-            div[data-testid="stHorizontalBlock"] {{ display: flex !important; flex-direction: row !important; }}
-            div[data-testid="column"] {{ width: 25% !important; flex: 1 1 25% !important; min-width: 25% !important; padding: 0 10px; break-inside: avoid; }}
-        }}
-    </style>
-    """, unsafe_allow_html=True)
-
-    # 개별 문항 렌더링 함수
-    def render_study_question(item, img_width):
+    
+    for item in questions:
         st.markdown(f"**{item['num']}. {item['q']}**")
         if item.get("image"):
-            try: st.image(item["image"], use_column_width=True if st.session_state.study_layout == "세로 배열(4단)" else False, width=img_width)
+            try: st.image(item["image"], width=current_img_width)
             except Exception: pass
             
         for opt in item['options']:
             if opt == item['answer']:
-                st.markdown(f"&nbsp;&nbsp;<span class='study-correct'>✅ {opt}</span>", unsafe_allow_html=True)
+                st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;<span class='study-correct'>✅ {opt}</span>", unsafe_allow_html=True)
             else:
-                st.markdown(f"&nbsp;&nbsp;<span style='color:#777;'>{opt}</span>", unsafe_allow_html=True)
+                st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;<span style='color:#777;'>{opt}</span>", unsafe_allow_html=True)
                 
         st.success(f"💡 해설: {item['explanation']}")
+        st.markdown("<br>", unsafe_allow_html=True)
 
-    # 렌더링 시작 (study-content 클래스 래핑)
-    st.markdown("<div class='study-content'>", unsafe_allow_html=True)
-
-    if st.session_state.study_layout == "가로 배열(1단)":
-        for item in questions:
-            render_study_question(item, current_img_width)
-            st.markdown("---")
-            
-    elif st.session_state.study_layout == "세로 배열(4단)":
-        for i in range(0, len(questions), 4):
-            cols = st.columns(4)
-            for j in range(4):
-                if i + j < len(questions):
-                    with cols[j]:
-                        render_study_question(questions[i+j], int(current_img_width/2))
-            st.markdown("---")
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    # 인쇄용 스타일 클리너
+    st.markdown("""
+    <style>
+        @media print {
+            header[data-testid="stHeader"], section[data-testid="stSidebar"], .stButton { display: none !important; }
+            @page { size: A4; margin: 10mm; }
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
 
 # =====================================================================
-# 6. [STEP 1] 문제 풀이 화면
+# 6. [STEP 1] 문제 풀이 화면 (실전 모드 - CBT 툴바 적용) 💡
 # =====================================================================
 elif not st.session_state.review_mode and not st.session_state.submitted:
     st.markdown(f"""
@@ -321,23 +284,72 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
     col_main, col_omr = st.columns([7.5, 2.5], gap="large")
     
     with col_main:
+        # 💡 [핵심] 실제 시험장과 완벽히 똑같은 설정 툴바 배치
+        tb_col1, tb_col2 = st.columns(2)
+        with tb_col1:
+            st.session_state.exam_font_size = st.radio("🔍 글자크기", ["100%", "150%", "200%"], horizontal=True, key="font_exam")
+        with tb_col2:
+            st.session_state.exam_layout = st.radio("📐 화면배치", ["가로(1단)", "세로(2단)"], horizontal=True, key="layout_exam")
+        st.markdown("---")
+
+        # 💡 [핵심] 레이아웃에 따른 동적 문항수 및 페이지네이션 통제
+        QUESTIONS_PER_PAGE = 4 if st.session_state.exam_layout == "세로(2단)" else 5
+        total_pages = math.ceil(len(questions) / QUESTIONS_PER_PAGE)
+        
+        # 레이아웃 변경 시 페이지 초과 방지
+        if st.session_state.current_page > total_pages: 
+            st.session_state.current_page = total_pages
+
         start_idx = (st.session_state.current_page - 1) * QUESTIONS_PER_PAGE
         end_idx = min(start_idx + QUESTIONS_PER_PAGE, len(questions))
         page_questions = questions[start_idx:end_idx]
         
-        for i, item in enumerate(page_questions):
-            actual_idx = start_idx + i 
-            st.markdown(f"**{item['num']}. {item['q']}**")
-            if item.get("image"):
-                try: st.image(item["image"], width=current_img_width)
-                except Exception: pass
-            
-            ans = st.session_state.user_answers.get(actual_idx)
-            ans_index = item['options'].index(ans) if ans in item['options'] else None
-            
-            choice = st.radio("보기 선택", item['options'], key=f"q_{actual_idx}", index=ans_index, label_visibility="collapsed")
-            st.session_state.user_answers[actual_idx] = choice
-            st.markdown("---")
+        # 글자 크기 동적 CSS (좌측 문제 영역에만 적용하여 우측 OMR 붕괴 방지)
+        size_em = float(st.session_state.exam_font_size.replace("%", "")) / 100.0
+        st.markdown(f"""
+        <style>
+            div[data-testid="column"]:nth-child(1) p, 
+            div[data-testid="column"]:nth-child(1) span,
+            div[data-testid="column"]:nth-child(1) div[role="radiogroup"] label div {{
+                font-size: {size_em}em !important;
+                line-height: 1.6 !important;
+            }}
+        </style>
+        """, unsafe_allow_html=True)
+
+        # 💡 화면 배열 분기 렌더링
+        if st.session_state.exam_layout == "세로(2단)":
+            # 세로 배열: 2줄(단) 분할, 총 4문제 (왼쪽 2개, 오른쪽 2개)
+            q_cols = st.columns(2, gap="large")
+            for i, item in enumerate(page_questions):
+                actual_idx = start_idx + i 
+                target_col = q_cols[0] if i < 2 else q_cols[1] # 0,1번은 왼쪽 / 2,3번은 오른쪽
+                
+                with target_col:
+                    st.markdown(f"**{item['num']}. {item['q']}**")
+                    if item.get("image"):
+                        try: st.image(item["image"], width=int(current_img_width * 0.9))
+                        except Exception: pass
+                    
+                    ans = st.session_state.user_answers.get(actual_idx)
+                    ans_index = item['options'].index(ans) if ans in item['options'] else None
+                    choice = st.radio("보기 선택", item['options'], key=f"q_{actual_idx}", index=ans_index, label_visibility="collapsed")
+                    st.session_state.user_answers[actual_idx] = choice
+                    st.markdown("<hr style='margin: 15px 0;'>", unsafe_allow_html=True)
+        else:
+            # 가로 배열: 기본 1단
+            for i, item in enumerate(page_questions):
+                actual_idx = start_idx + i 
+                st.markdown(f"**{item['num']}. {item['q']}**")
+                if item.get("image"):
+                    try: st.image(item["image"], width=current_img_width)
+                    except Exception: pass
+                
+                ans = st.session_state.user_answers.get(actual_idx)
+                ans_index = item['options'].index(ans) if ans in item['options'] else None
+                choice = st.radio("보기 선택", item['options'], key=f"q_{actual_idx}", index=ans_index, label_visibility="collapsed")
+                st.session_state.user_answers[actual_idx] = choice
+                st.markdown("---")
             
         st.markdown("<div class='bottom-bar'></div>", unsafe_allow_html=True)
         
@@ -375,6 +387,7 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
                 is_answered = st.session_state.user_answers.get(idx) is not None
                 btn_label = f"🟢 {q_num}" if is_answered else f"⚪ {q_num}"
                 if cols[idx % 4].button(btn_label, key=f"omr_btn_{idx}", use_container_width=True):
+                    # OMR 클릭 시 레이아웃 변동이 있어도 올바른 페이지로 완벽히 추적 이동
                     st.session_state.current_page = (idx // QUESTIONS_PER_PAGE) + 1
                     st.rerun()
 
