@@ -355,13 +355,10 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
                 actual_idx = start_idx + i 
                 target_col = q_cols[0] if i < 2 else q_cols[1] # 0, 1번은 왼쪽 / 2, 3번은 오른쪽으로 분배
                 
-                with target_col:
-                    st.markdown(f"**{item['num']}. {item['q']}**")
-                 
-                # (세로 배열과 가로 배열의 문제 출력부를 아래와 같이 수정)
-                wrong_badge = " <span style='color:#e74c3c; font-size:0.85em; font-weight:bold;'>[🚨 이전 오답]</span>" if item['q'] in st.session_state.wrong_history else ""
-                st.markdown(f"**{item['num']}. {item['q']}**{wrong_badge}", unsafe_allow_html=True)
-                
+               with target_col:
+                    wrong_badge = " <span style='color:#e74c3c; font-size:0.85em; font-weight:bold;'>[🚨 이전 오답]</span>" if item['q'] in st.session_state.wrong_history else ""
+                    st.markdown(f"**{item['num']}. {item['q']}**{wrong_badge}", unsafe_allow_html=True)
+                    
                     if item.get("image"):
                         try: st.image(item["image"], width=int(dynamic_img_width * 0.9))
                         except Exception: pass
@@ -528,7 +525,7 @@ elif st.session_state.submitted:
     wrong_questions = []
     correct_questions = []
 
- for idx, item in enumerate(questions):
+    for idx, item in enumerate(questions):
         my_answer = st.session_state.user_answers.get(idx)
         if my_answer == item['answer']:
             correct_count += 1
