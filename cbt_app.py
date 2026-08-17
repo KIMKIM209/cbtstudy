@@ -16,7 +16,7 @@ ADMIN_PW = "880801"
 # 🤝 게스트 계정 (지인 공유용, 기간 한정 접속)
 GUEST_ID = "free"
 GUEST_PW = "1004"
-GUEST_EXPIRY_DATE = "2026-08-16" # YYYY-MM-DD 형식으로 만료일 지정
+GUEST_EXPIRY_DATE = "2026-08-23" # YYYY-MM-DD 형식으로 만료일 지정
 
 
 # --- 1. 기본 설정 및 실전 CBT 전용 CSS ---
@@ -27,14 +27,12 @@ st.markdown("""
     /* =====================================================================
        💡 폰트 및 시각 환경 실전 완벽 동기화 (CBT 표준 질감)
        ===================================================================== */
-    /* 무차별적 * 선택자 대신 텍스트 요소만 정밀 타격하여 아이콘 깨짐을 방지합니다. */
     p, span, div, label, h1, h2, h3, h4, h5, h6, li {
         font-family: 'Malgun Gothic', '맑은 고딕', 'Gulim', '굴림', 'Apple SD Gothic Neo', sans-serif !important;
         letter-spacing: -0.5px !important;
         word-break: keep-all !important;
     }
     
-    /* Streamlit 기본 아이콘(화살표, 톱니바퀴 등) 폰트 강제 복구 (글자 겹침 해결) */
     .material-icons, .material-symbols-rounded, [class*="stIcon"], [data-testid="stExpanderToggleIcon"] {
         font-family: 'Material Symbols Rounded', 'Material Icons' !important;
         letter-spacing: normal !important;
@@ -229,7 +227,7 @@ remain_td = datetime.timedelta(seconds=remain_seconds)
 today_str = datetime.datetime.now().strftime("%Y-%m-%d")
 
 # 접속자 이름 및 게스트 전용 기한 표시 로직
-display_user_name = "김영준" if st.session_state.user_type == "Admin" else "게스트 (Guest)"
+display_user_name = "홍길동" if st.session_state.user_type == "Admin" else "게스트 (Guest)"
 guest_expiry_banner = f"<span style='color: #ffeb3b;'>사용기간 : ~ {GUEST_EXPIRY_DATE}</span><br>" if st.session_state.user_type == "Guest" else ""
 guest_expiry_review = f"<b>사용기간:</b> ~ <span style='color: #d9534f;'>{GUEST_EXPIRY_DATE}</span><br><br>" if st.session_state.user_type == "Guest" else ""
 
@@ -301,9 +299,10 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
         # 실제 시험장과 완벽히 똑같은 설정 툴바 배치
         tb_col1, tb_col2 = st.columns(2)
         with tb_col1:
-            st.session_state.font_exam = st.radio("🔍 글자크기", ["100%", "150%", "200%"], horizontal=True, key="font_exam")
+            # 💡 [버그 수정 구역] 라디오 버튼 렌더링 시 st.session_state 직접 할당 중복 방지
+            st.radio("🔍 글자크기", ["100%", "150%", "200%"], horizontal=True, key="font_exam")
         with tb_col2:
-            st.session_state.layout_exam = st.radio("📐 화면배치", ["가로(1단)", "세로(2단)"], horizontal=True, key="layout_exam")
+            st.radio("📐 화면배치", ["가로(1단)", "세로(2단)"], horizontal=True, key="layout_exam")
         st.markdown("---")
 
         # 레이아웃에 따른 동적 문항수(4문제 vs 5문제) 및 페이지네이션 통제
@@ -449,9 +448,10 @@ elif st.session_state.review_mode and not st.session_state.submitted:
 <b>시험명:</b><br>{st.session_state.selected_exam_name[:20]}<br><br>
 <b>시험일자:</b> {today_str}<br><br>
 <b>부:</b> 1<br><br>
-{guest_expiry_review}<b>수험번호:</b> 0001<br>
-<b>수험자명:</b> 홍길동<br>
+{guest_expiry_review}<b>수험번호:</b> 1000007<br><br>
+<b>수험자명:</b> {display_user_name}<br><br>
 <b>남은시간:</b> {remain_td}
+</div>
 </div>
 <div class="review-omr-panel">
 <div class="review-omr-header">답안표기란</div>
