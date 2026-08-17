@@ -213,7 +213,7 @@ remain_td = datetime.timedelta(seconds=remain_seconds)
 today_str = datetime.datetime.now().strftime("%Y-%m-%d")
 
 # 접속자 이름 및 게스트 전용 기한 표시 로직 💡
-display_user_name = "김영준" if st.session_state.user_type == "Admin" else "게스트 (Guest)"
+display_user_name = "홍길동" if st.session_state.user_type == "Admin" else "게스트 (Guest)"
 guest_expiry_banner = f"<span style='color: #ffeb3b;'>사용기간 : ~ {GUEST_EXPIRY_DATE}</span><br>" if st.session_state.user_type == "Guest" else ""
 guest_expiry_review = f"<b>사용기간:</b> ~ <span style='color: #d9534f;'>{GUEST_EXPIRY_DATE}</span><br><br>" if st.session_state.user_type == "Guest" else ""
 
@@ -262,7 +262,6 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
         수험번호 : 0001
         수험자명 : 홍길동
         남은시간 : {remain_td}
-    </div>
 </div>
 """, unsafe_allow_html=True)
 
