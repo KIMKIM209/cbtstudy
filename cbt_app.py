@@ -16,7 +16,7 @@ ADMIN_PW = "880801"
 # 🤝 게스트 계정 (지인 공유용, 기간 한정 접속)
 GUEST_ID = "free"
 GUEST_PW = "1004"
-GUEST_EXPIRY_DATE = "2026-08-16" # YYYY-MM-DD 형식으로 만료일 지정
+GUEST_EXPIRY_DATE = "2026-08-30" # YYYY-MM-DD 형식으로 만료일 지정
 
 # --- 1. 기본 설정 및 실전 CBT 전용 CSS ---
 st.set_page_config(page_title="국가기술자격 실전 CBT", page_icon="⚡", layout="wide", initial_sidebar_state="collapsed")
@@ -164,6 +164,13 @@ exam_mapping = {
     "26년도 기본 90제": "questions90",  
     "26년도 꼼수 63문제": "questions"
 }
+
+# 🔒 [접근 제어] 게스트 계정 접속 시 '소방설비기사' 제외 필터링
+if st.session_state.user_type == "Guest":
+    exam_mapping = {k: v for k, v in ALL_EXAM_MAPPING.items() if "소방설비기사" not in k}
+else:
+    exam_mapping = ALL_EXAM_MAPPING
+
 exam_list = list(exam_mapping.keys())
 
 # --- 3. 전역 세션 상태 통제 ---
