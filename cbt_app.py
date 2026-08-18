@@ -302,7 +302,7 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
     <div class="info">
         {guest_expiry_banner}
         수험번호 : 0001
-        수험자명 : {display_user_name}
+        수험자명 : 홍길동
         남은시간 : {remain_td}
 </div>
 """, unsafe_allow_html=True)
@@ -455,7 +455,7 @@ elif st.session_state.review_mode and not st.session_state.submitted:
 <b>시험일자:</b> {today_str}<br><br>
 <b>부:</b> 1<br><br>
 {guest_expiry_review}<b>수험번호:</b> 0001<br>
-<b>수험자명:</b> {display_user_name}<br>
+<b>수험자명:</b> 홍길동<br>
 <b>남은시간:</b> {remain_td}
 </div>
 <div class="review-omr-panel">
@@ -574,7 +574,7 @@ elif st.session_state.submitted:
 <table class="result-table">
     <tr>
         <th>수험자 이름</th>
-        <td>{display_user_name}</td>
+        <td>홍길동</td>
     </tr>
     <tr>
         <th>응시종목</th>
