@@ -16,7 +16,7 @@ ADMIN_PW = "880801"
 # 🤝 게스트 계정 (지인 공유용, 기간 한정 접속)
 GUEST_ID = "free"
 GUEST_PW = "1004"
-GUEST_EXPIRY_DATE = "2026-08-16" # YYYY-MM-DD 형식으로 만료일 지정
+GUEST_EXPIRY_DATE = "2026-08-30" # YYYY-MM-DD 형식으로 만료일 지정
 
 # --- 1. 기본 설정 및 실전 CBT 전용 CSS ---
 st.set_page_config(page_title="국가기술자격 실전 CBT", page_icon="⚡", layout="wide", initial_sidebar_state="collapsed")
