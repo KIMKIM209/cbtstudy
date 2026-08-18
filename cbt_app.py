@@ -16,7 +16,7 @@ ADMIN_PW = "880801"
 # 🤝 게스트 계정 (지인 공유용, 기간 한정 접속)
 GUEST_ID = "free"
 GUEST_PW = "1004"
-GUEST_EXPIRY_DATE = "2026-08-30" # YYYY-MM-DD 형식으로 만료일 지정
+GUEST_EXPIRY_DATE = "2026-08-16" # YYYY-MM-DD 형식으로 만료일 지정
 
 # --- 1. 기본 설정 및 실전 CBT 전용 CSS ---
 st.set_page_config(page_title="국가기술자격 실전 CBT", page_icon="⚡", layout="wide", initial_sidebar_state="collapsed")
@@ -137,8 +137,8 @@ if not st.session_state.authenticated:
     st.stop()
 
 
-# --- 2. 기출문제 매핑 ---
-exam_mapping = {
+# --- 2. 전체 기출문제 원본 매핑 ---
+ALL_EXAM_MAPPING = {
     "26년도 소방설비기사(전기) 2회차 시험 (202602)": "2602", 
     "26년도 소방설비기사(전기) 1회차 시험 (202601)": "2601", 
     "25년도 다산 소방설비기사(전기) 3회차 시험 (202503)": "D2503", 
@@ -174,8 +174,12 @@ else:
 exam_list = list(exam_mapping.keys())
 
 # --- 3. 전역 세션 상태 통제 ---
-if 'selected_exam_name' not in st.session_state: st.session_state.selected_exam_name = exam_list[0]
-if 'current_exam' not in st.session_state: st.session_state.current_exam = exam_mapping[exam_list[0]]
+# 세션에 저장된 시험명이 현재 권한 목록(exam_list)에 없는 경우 첫 번째 시험으로 자동 재설정
+if ('selected_exam_name' not in st.session_state) or (st.session_state.selected_exam_name not in exam_list):
+    st.session_state.selected_exam_name = exam_list[0]
+    st.session_state.current_exam = exam_mapping[exam_list[0]]
+
+if 'current_exam' not in st.session_state: st.session_state.current_exam = exam_mapping[st.session_state.selected_exam_name]
 if 'user_answers' not in st.session_state: st.session_state.user_answers = {}
 if 'review_mode' not in st.session_state: st.session_state.review_mode = False 
 if 'submitted' not in st.session_state: st.session_state.submitted = False 
@@ -184,7 +188,7 @@ if 'current_page' not in st.session_state: st.session_state.current_page = 1
 if 'start_time' not in st.session_state: st.session_state.start_time = time.time()
 if 'end_time' not in st.session_state: st.session_state.end_time = None
 if 'img_expanded' not in st.session_state: st.session_state.img_expanded = False
-if 'wrong_history' not in st.session_state: st.session_state.wrong_history = set() # 🚨 오답 이력 저장용 (Set 구조 활용)
+if 'wrong_history' not in st.session_state: st.session_state.wrong_history = set()
 
 # 💡 실전(시험) 모드용 레이아웃 및 폰트 설정 상태 변수 초기화
 if 'font_exam' not in st.session_state: st.session_state.font_exam = "100%"
@@ -298,7 +302,7 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
     <div class="info">
         {guest_expiry_banner}
         수험번호 : 0001
-        수험자명 : 홍길동
+        수험자명 : {display_user_name}
         남은시간 : {remain_td}
 </div>
 """, unsafe_allow_html=True)
@@ -306,7 +310,6 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
     col_main, col_omr = st.columns([7.5, 2.5], gap="large")
     
     with col_main:
-        # 실제 시험장과 완벽히 똑같은 설정 툴바 배치
         tb_col1, tb_col2 = st.columns(2)
         with tb_col1:
             st.session_state.font_exam = st.radio("🔍 글자크기", ["100%", "95%", "105%"], horizontal=True, key="font_exam_radio")
@@ -314,11 +317,9 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
             st.session_state.layout_exam = st.radio("📐 화면배치", ["세로(2단)", "가로(1단)"], horizontal=True, key="layout_exam_radio")
         st.markdown("---")
 
-        # 레이아웃에 따른 동적 문항수(4문제 vs 5문제) 및 페이지네이션 통제
         QUESTIONS_PER_PAGE = 4 if st.session_state.layout_exam == "세로(2단)" else 5
         total_pages = math.ceil(len(questions) / QUESTIONS_PER_PAGE)
         
-        # 화면 배열 변경 시 초과 페이지 방어 로직
         if st.session_state.current_page > total_pages: 
             st.session_state.current_page = total_pages
 
@@ -326,37 +327,31 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
         end_idx = min(start_idx + QUESTIONS_PER_PAGE, len(questions))
         page_questions = questions[start_idx:end_idx]
         
-        # 강제 폰트 크기 변환 및 충돌 방지 CSS 주입 (오직 문제와 보기만 확대)
         size_em = float(st.session_state.font_exam.replace("%", "")) / 100.0
         dynamic_img_width = int(current_img_width * size_em) 
         
         st.markdown(f"""
         <style>
-            /* 문제 지문 텍스트 통제 */
             div[data-testid="stMarkdownContainer"] p {{
                 font-size: {size_em}em !important;
                 line-height: 1.6 !important;
                 transition: font-size 0.2s ease-in-out;
             }}
-            /* 보기 라디오 버튼 텍스트 통제 */
             div[role="radiogroup"] label p, 
             div[role="radiogroup"] label div {{
                 font-size: {size_em}em !important;
                 line-height: 1.4 !important;
             }}
-            /* 하단 네비게이션 및 OMR 영역 오작동 방지 */
             button p {{ font-size: 16px !important; }}
             .cbt-banner p, .omr-header p, .bottom-bar-text p {{ font-size: inherit !important; }}
         </style>
         """, unsafe_allow_html=True)
 
-        # 화면 배열 분기 렌더링 시작
         if st.session_state.layout_exam == "세로(2단)":
-            # 세로 배열: 2줄(단) 분할, 총 4문제 (왼쪽 2개, 오른쪽 2개)
             q_cols = st.columns(2, gap="large")
             for i, item in enumerate(page_questions):
                 actual_idx = start_idx + i 
-                target_col = q_cols[0] if i < 2 else q_cols[1] # 0, 1번은 왼쪽 / 2, 3번은 오른쪽으로 분배
+                target_col = q_cols[0] if i < 2 else q_cols[1]
                 
                 with target_col:
                     wrong_badge = " <span style='color:#e74c3c; font-size:0.85em; font-weight:bold;'>[🚨 이전 오답]</span>" if item['q'] in st.session_state.wrong_history else ""
@@ -372,7 +367,6 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
                     st.session_state.user_answers[actual_idx] = choice
                     st.markdown("<hr style='margin: 15px 0;'>", unsafe_allow_html=True)
         else:
-            # 가로 배열: 기본 1단 (5문제)
             for i, item in enumerate(page_questions):
                 actual_idx = start_idx + i 
                 wrong_badge = " <span style='color:#e74c3c; font-size:0.85em; font-weight:bold;'>[🚨 이전 오답]</span>" if item['q'] in st.session_state.wrong_history else ""
@@ -424,7 +418,6 @@ elif not st.session_state.review_mode and not st.session_state.submitted:
                 is_answered = st.session_state.user_answers.get(idx) is not None
                 btn_label = f"🟢 {q_num}" if is_answered else f"⚪ {q_num}"
                 if cols[idx % 4].button(btn_label, key=f"omr_btn_{idx}", use_container_width=True):
-                    # OMR 마킹 클릭 시 해당 문제가 있는 정확한 페이지로 완벽히 추적 이동
                     st.session_state.current_page = (idx // QUESTIONS_PER_PAGE) + 1
                     st.rerun()
 
@@ -438,7 +431,7 @@ elif st.session_state.review_mode and not st.session_state.submitted:
     <div class="title">01 {st.session_state.selected_exam_name}</div>
     <div class="info">
         {guest_expiry_banner}
-        수험번호: 0001 | 수험자명: 홍길동
+        수험번호: 0001 | 수험자명: {display_user_name}
 </div>
 """, unsafe_allow_html=True)
 
@@ -462,7 +455,7 @@ elif st.session_state.review_mode and not st.session_state.submitted:
 <b>시험일자:</b> {today_str}<br><br>
 <b>부:</b> 1<br><br>
 {guest_expiry_review}<b>수험번호:</b> 0001<br>
-<b>수험자명:</b> 홍길동<br>
+<b>수험자명:</b> {display_user_name}<br>
 <b>남은시간:</b> {remain_td}
 </div>
 <div class="review-omr-panel">
@@ -535,12 +528,10 @@ elif st.session_state.submitted:
         if my_answer == item['answer']:
             correct_count += 1
             correct_questions.append({"item": item, "my_answer": my_answer})
-            # 다시 풀어서 정답을 맞췄다면 오답 족쇄를 풀어줍니다.
             if item['q'] in st.session_state.wrong_history:
                 st.session_state.wrong_history.remove(item['q'])
         else:
             wrong_questions.append({"item": item, "my_answer": my_answer})
-            # 틀린 문제는 오답 세션에 확실히 각인시킵니다.
             st.session_state.wrong_history.add(item['q'])
             
     total_score = int((correct_count / len(questions)) * 100)
@@ -583,7 +574,7 @@ elif st.session_state.submitted:
 <table class="result-table">
     <tr>
         <th>수험자 이름</th>
-        <td>홍길동</td>
+        <td>{display_user_name}</td>
     </tr>
     <tr>
         <th>응시종목</th>
