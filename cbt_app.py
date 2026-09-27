@@ -295,8 +295,52 @@ if st.session_state.study_mode:
     st.markdown("""
     <style>
         @media print {
-            header[data-testid="stHeader"], section[data-testid="stSidebar"], .stButton { display: none !important; }
-            @page { size: A4; margin: 10mm; }
+            /* 1. 불필요한 UI 숨김 및 화면 여백 최소화 */
+            header[data-testid="stHeader"], section[data-testid="stSidebar"], .stButton, div.stAlert, .stInfo { display: none !important; }
+            .main .block-container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+            
+            /* 2. A4 용지 규격 및 시험지 여백 설정 */
+            @page { size: A4; margin: 15mm 12mm; }
+            
+            /* 3. 전체 색상 흑백(B&W)화 및 기출문제용 폰트 크기 조정 */
+            * { 
+                color: #000 !important; 
+                background-color: transparent !important; 
+                box-shadow: none !important;
+                font-family: 'Malgun Gothic', '맑은 고딕', sans-serif !important; 
+            }
+            p, span, div { font-size: 10.5pt !important; line-height: 1.4 !important; }
+            
+            /* 4. PDF 형태의 2단 편집 (단 나누기 및 중앙 구분선 추가) */
+            [data-testid="stVerticalBlock"] {
+                column-count: 2;
+                column-gap: 12mm;
+                column-rule: 1px solid #777;
+            }
+            
+            /* 5. 상단 타이틀은 2단 분리에서 제외 및 중앙 정렬 (PDF 상단 타이틀 동기화) */
+            h3 { 
+                column-span: all; 
+                text-align: center; 
+                border-bottom: 2px solid #000; 
+                padding-bottom: 12px; 
+                font-size: 16pt !important; 
+                font-weight: bold !important; 
+                margin-bottom: 25px !important; 
+            }
+            
+            /* 6. 문항 잘림 방지 (한 문항이 다음 단이나 다음 페이지로 쪼개지는 현상 차단) */
+            .element-container, div[data-testid="stMarkdownContainer"] { 
+                break-inside: avoid !important; 
+                page-break-inside: avoid !important; 
+                margin-bottom: 5px !important; 
+            }
+            
+            /* 7. 정답 표기 스타일 변경 (잉크 절약을 위해 배경색 제거 후 굵게 및 밑줄 처리) */
+            .study-correct { 
+                font-weight: 900 !important; 
+                text-decoration: underline !important; 
+            }
         }
     </style>
     """, unsafe_allow_html=True)
