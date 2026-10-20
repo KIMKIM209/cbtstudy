@@ -519,7 +519,7 @@ questions = [
             "④"
         ],
         "answer": "③",
-        "explanation": "Z = √{4² + (5 - 2)²} = 5Ω. 회로 전류 I = V / Z = 100 / 5 = 20A"
+        "explanation": "Z = √{4² + (5 - 2)²} = 5Ω. 회로 전류 I = V / Z = 100 / 5 = 20A",
         "image": "images/g260143.jpg"
     },
     {
